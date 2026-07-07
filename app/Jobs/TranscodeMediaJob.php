@@ -2,12 +2,11 @@
 
 namespace App\Jobs;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
-class TranscodeMediaJob implements ShouldQueue
+class TranscodeMediaJob implements DispatchableJob
 {
     use Queueable;
 
@@ -37,7 +36,7 @@ class TranscodeMediaJob implements ShouldQueue
         $process = new Process($command);
         $process->setTimeout(3600);
         $process->run(function ($type, $buffer) {
-            Log::info(sprintf('[FFMPEG] %s', $buffer));
+            Log::info(sprintf('[FFMPEG] %s %s', $type, $buffer));
         });
 
         if (! $process->isSuccessful()) {

@@ -1,0 +1,25 @@
+models:
+  Library:
+    base_path: string
+    status: string
+    scan_interval: integer
+    last_scan: timestamp nullable
+    relationships:
+      hasMany: LibraryJob
+
+  LibraryJob:
+    library_id: foreignId
+    job_id: string
+    relationships:
+      belongsTo: Library
+      hasMany: Execution
+
+  Execution:
+    library_job_id: foreignId
+    worker_id: string
+    file_path: string
+    status: string
+    started_at: timestamp nullable
+    finished_at: timestamp nullable
+    relationships:
+      belongsTo: LibraryJob

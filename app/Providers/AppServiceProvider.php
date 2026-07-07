@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use FFMpeg\FFMpeg;
+use FFMpeg\FFProbe;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -15,7 +17,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(FFProbe::class, function () {
+            return FFProbe::create();
+        });
+
+        // If you also inject FFMpeg\FFMpeg elsewhere, bind it as well:
+        $this->app->bind(FFMpeg::class, function () {
+            return FFMpeg::create();
+        });
     }
 
     /**
