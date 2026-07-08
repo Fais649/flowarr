@@ -35,8 +35,13 @@ Literally completely non-functional, still scaffolding out the architecture
 - [ ] SMB mount storage support
 - [ ] Customizable File Rules
 - [ ] Filewatcher that detects changes/additions to watched folder and auto-runs transformations
- 
-
 # Quickstart
 - Clone the repo
 - ./vendor/bin/sail up -d
+# Contributing
+- Fork the repo
+- Make a branch
+- Make changes
+- Commit changes
+- Submit pull request
+- Wait
