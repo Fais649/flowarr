@@ -1,0 +1,14 @@
+created:
+    - database/factories/LibraryFactory.php
+    - database/factories/LibraryJobFactory.php
+    - database/factories/ExecutionFactory.php
+    - database/migrations/2026_07_05_084404_create_libraries_table.php
+    - database/migrations/2026_07_05_084405_create_library_jobs_table.php
+    - database/migrations/2026_07_05_084406_create_executions_table.php
+    - app/Models/Library.php
+    - app/Models/LibraryJob.php
+    - app/Models/Execution.php
+models:
+    Library: { base_path: string, status: string, scan_interval: integer, last_scan: 'timestamp nullable', relationships: { hasMany: LibraryJob } }
+    LibraryJob: { library_id: foreignId, job_id: string, relationships: { belongsTo: Library, hasMany: Execution } }
+    Execution: { library_job_id: foreignId, worker_id: string, file_path: string, status: string, started_at: 'timestamp nullable', finished_at: 'timestamp nullable', relationships: { belongsTo: LibraryJob } }

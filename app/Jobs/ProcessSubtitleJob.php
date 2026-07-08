@@ -3,12 +3,11 @@
 namespace App\Jobs;
 
 use Exception;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
-class ProcessSubtitleJob implements ShouldQueue
+class ProcessSubtitleJob implements DispatchableJob
 {
     use Queueable;
 
