@@ -2,11 +2,12 @@
 
 namespace App\Jobs;
 
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
-class TranscodeMediaJob implements DispatchableJob
+class TranscodeMediaJob implements ShouldQueue
 {
     use Queueable;
 
