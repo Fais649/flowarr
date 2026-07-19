@@ -4,7 +4,7 @@ namespace App;
 
 use App\Jobs\ConvertSubtitleJob;
 use App\Jobs\DispatchableJob;
-use App\Jobs\ProcessSubtitleJob;
+use App\Jobs\ExtractSubtitlesJob;
 use App\Jobs\TranscodeMediaJob;
 
 enum LibraryJobId: string
@@ -20,7 +20,7 @@ enum LibraryJobId: string
     {
         return match ($this) {
             self::TRANSCODE_MEDIA => TranscodeMediaJob::class,
-            self::EXTRACT_SUBTITLES => ProcessSubtitleJob::class,
+            self::EXTRACT_SUBTITLES => ExtractSubtitlesJob::class,
             self::CONVERT_SUBTITLE => ConvertSubtitleJob::class,
         };
     }
