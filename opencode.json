@@ -10,5 +10,19 @@
                 "boost:mcp"
             ]
         }
+    },
+    "provider": {
+        "ollama": {
+            "npm": "@ai-sdk/openai-compatible",
+            "name": "Ollama",
+            "options": {
+                "baseURL": "http://localhost:11434/v1"
+            },
+            "models": {
+                "phi-coder": {
+                    "name": "phi-coder"
+                }
+            }
+        }
     }
 }

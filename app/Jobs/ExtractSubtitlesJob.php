@@ -2,12 +2,14 @@
 
 namespace App\Jobs;
 
+use Closure;
 use Exception;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
-class ProcessSubtitleJob implements DispatchableJob
+class ExtractSubtitlesJob implements ShouldQueue
 {
     use Queueable;
 
@@ -19,14 +21,11 @@ class ProcessSubtitleJob implements DispatchableJob
         'webvtt',
     ];
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct(public string $filePath) {}
+    public function __construct(
+        public string $filePath,
+        protected ?Closure $processFactory = null,
+    ) {}
 
-    /**
-     * Execute the job.
-     */
     public function handle(): void
     {
         if (! file_exists($this->filePath)) {
@@ -39,6 +38,8 @@ class ProcessSubtitleJob implements DispatchableJob
         $baseName = pathinfo($this->filePath, PATHINFO_FILENAME);
         $outputFile = sprintf('%s.tmp.mkv', $this->filePath);
 
+        $factory = $this->processFactory ?? fn (array $command) => new Process($command);
+
         try {
             $probeCommand = [
                 'ffprobe',
@@ -49,7 +50,7 @@ class ProcessSubtitleJob implements DispatchableJob
                 $this->filePath,
             ];
 
-            $probe = new Process($probeCommand);
+            $probe = $factory($probeCommand);
             $probe->run();
 
             if (! $probe->isSuccessful()) {
@@ -87,20 +88,16 @@ class ProcessSubtitleJob implements DispatchableJob
                 $isoMap = config('languages');
                 $shortLang = $isoMap[$languageCode] ?? $languageCode;
 
-                // 2. Build the filename
-                // Result: House of the Dragon - S03E01 - TBA.en.srt
-                /* $outputPath = sprintf('%s/%s.%s.srt', $dir, $baseName, $languageCode); */
                 $outputPath = sprintf('%s/%s.%s.srt', $dir, $baseName, $shortLang);
 
                 $extractCommand = [
                     'ffmpeg', '-y', '-v', 'error',
-                    '-txt_format', 'srt',
                     '-i', $this->filePath,
                     '-map', sprintf('0:%s', $index),
                     $outputPath,
                 ];
 
-                $extract = new Process($extractCommand);
+                $extract = $factory($extractCommand);
                 $extract->run();
 
                 if ($extract->isSuccessful()) {
@@ -118,7 +115,7 @@ class ProcessSubtitleJob implements DispatchableJob
                     $this->filePath,
                 ];
 
-                $stripProcess = new Process($stripCommand);
+                $stripProcess = $factory($stripCommand);
                 $stripProcess->run();
 
                 if ($stripProcess->isSuccessful()) {
@@ -135,9 +132,9 @@ class ProcessSubtitleJob implements DispatchableJob
             }
 
         } catch (Exception $e) {
-            Log::error(sprintf('ProcessSubtitleJob Exception encountered: %s', $e->getMessage()));
+            Log::error(sprintf('ExtractSubtitlesJob Exception encountered: %s', $e->getMessage()));
         } finally {
-            if (file_exists($outputFile)) {
+            if (isset($outputFile) && file_exists($outputFile)) {
                 unlink($outputFile);
             }
         }
