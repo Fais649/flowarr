@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\LibraryJobId;
+use App\Traits\HasJobSlot;
 use Closure;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -11,7 +13,12 @@ use Symfony\Component\Process\Process;
 
 class ExtractSubtitlesJob implements ShouldQueue
 {
-    use Queueable;
+    use HasJobSlot, Queueable;
+
+    public static function jobType(): string
+    {
+        return LibraryJobId::EXTRACT_SUBTITLES->value;
+    }
 
     private const TEXT_BASED_CODECS = [
         'subrip',
@@ -28,19 +35,27 @@ class ExtractSubtitlesJob implements ShouldQueue
 
     public function handle(): void
     {
-        if (! file_exists($this->filePath)) {
-            Log::error(sprintf('Target file does not exist or is inaccessible: %s', $this->filePath));
+
+        $lock = $this->acquireSlot(3600);
+        if (! $lock) {
+            $this->release(5);
 
             return;
         }
 
-        $dir = pathinfo($this->filePath, PATHINFO_DIRNAME);
-        $baseName = pathinfo($this->filePath, PATHINFO_FILENAME);
-        $outputFile = sprintf('%s.tmp.mkv', $this->filePath);
-
-        $factory = $this->processFactory ?? fn (array $command) => new Process($command);
-
         try {
+            if (! file_exists($this->filePath)) {
+                Log::error(sprintf('Target file does not exist or is inaccessible: %s', $this->filePath));
+
+                return;
+            }
+
+            $dir = pathinfo($this->filePath, PATHINFO_DIRNAME);
+            $baseName = pathinfo($this->filePath, PATHINFO_FILENAME);
+            $outputFile = sprintf('%s.tmp.mkv', $this->filePath);
+
+            $factory = $this->processFactory ?? fn (array $command) => new Process($command);
+
             $probeCommand = [
                 'ffprobe',
                 '-v', 'error',
@@ -137,6 +152,7 @@ class ExtractSubtitlesJob implements ShouldQueue
             if (isset($outputFile) && file_exists($outputFile)) {
                 unlink($outputFile);
             }
+            $lock->release();
         }
 
         Log::info(sprintf('Finished processing subtitles for %s', $this->filePath));

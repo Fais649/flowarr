@@ -45,6 +45,7 @@ class ScanLibraryCommand extends Command
 
             return;
         }
+
         $files = Finder::create()
             ->files()
             ->in($library->base_path)

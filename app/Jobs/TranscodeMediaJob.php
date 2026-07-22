@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\LibraryJobId;
+use App\Traits\HasJobSlot;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
@@ -10,7 +12,12 @@ use Symfony\Component\Process\Process;
 
 class TranscodeMediaJob implements ShouldQueue
 {
-    use Queueable;
+    use HasJobSlot, Queueable;
+
+    public static function jobType(): string
+    {
+        return LibraryJobId::TRANSCODE_MEDIA->value;
+    }
 
     /**
      * Create a new job instance.
@@ -22,55 +29,63 @@ class TranscodeMediaJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $inputPath = $this->filePath;
-        $outputPath = preg_replace('/(\.[^.]+)$/', 'HEVC$1', $inputPath);
+        $lock = $this->acquireSlot(3600);
+        if (! $lock) {
+            $this->release(5);
 
-        // Check if we should use software encoding for compatibility (e.g. in CI or if NVENC is unavailable)
-        // We can use a config value to toggle this.
-        $useNvenc = config('services.ffmpeg.use_nvenc', true);
+            return;
+        }
 
-        $videoCodec = $useNvenc ? 'hevc_nvenc' : 'libx265';
+        try {
+            $inputPath = $this->filePath;
+            $outputPath = preg_replace('/(\.[^.]+)$/', 'HEVC$1', $inputPath);
+            $useNvenc = config('services.ffmpeg.use_nvenc', true);
 
-        $preset = match ($videoCodec) {
-            'hevc_nvenc' => 'p4',
-            default => 'medium',
-        };
+            $videoCodec = $useNvenc ? 'hevc_nvenc' : 'libx265';
 
-        $command = [
-            config('services.ffmpeg.bin', 'ffmpeg'),
-            '-y',
-            '-i', $inputPath,
-            '-vf', config('services.ffmpeg.video_filter', 'zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p'),
-            '-c:v', $videoCodec,
-            '-preset', $preset,
-            '-c:a', 'copy',
-            $outputPath,
-        ];
+            $preset = match ($videoCodec) {
+                'hevc_nvenc' => 'p4',
+                default => 'medium',
+            };
 
-        $process = $this->process ?? new Process($command);
-        $process->setTimeout(null);
-        if (! $process->isStarted()) {
+            $command = [
+                config('services.ffmpeg.bin', 'ffmpeg'),
+                '-y',
+                '-i', $inputPath,
+                '-vf', config('services.ffmpeg.video_filter', 'zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p'),
+                '-c:v', $videoCodec,
+                '-preset', $preset,
+                '-c:a', 'copy',
+                $outputPath,
+            ];
+
+            $process = $this->process ?? new Process($command);
             $process->setTimeout(null);
-            $process->start();
-        }
-
-        while ($process->isRunning()) {
-            if (Cache::get('media_processing_paused')) {
-                posix_kill($process->getPid(), SIGSTOP);
-
-                while (Cache::get('media_processing_paused')) {
-                    sleep(2);
-                }
-
-                posix_kill($process->getPid(), SIGCONT);
+            if (! $process->isStarted()) {
+                $process->setTimeout(null);
+                $process->start();
             }
-            $process->checkTimeout();
-            usleep(200000);
-        }
 
-        if (! $process->isSuccessful()) {
-            throw new \RuntimeException($process->getErrorOutput());
+            while ($process->isRunning()) {
+                if (Cache::get('media_processing_paused')) {
+                    posix_kill($process->getPid(), SIGSTOP);
+
+                    while (Cache::get('media_processing_paused')) {
+                        sleep(2);
+                    }
+
+                    posix_kill($process->getPid(), SIGCONT);
+                }
+                $process->checkTimeout();
+                usleep(200000);
+            }
+
+            if (! $process->isSuccessful()) {
+                throw new \RuntimeException($process->getErrorOutput());
+            }
+            Log::info("Transcode successful {$outputPath}");
+        } finally {
+            $lock->release();
         }
-        Log::info("Transcode successful {$outputPath}");
     }
 }
