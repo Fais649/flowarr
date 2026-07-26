@@ -36,7 +36,7 @@ class MediaProbeService
             fn ($s) => $s->get('codec_type') === 'subtitle');
 
         return new MediaProbeResult(
-            extension: $extension,
+            fileExtension: $extension,
             videoCodec: $videoCodec,
             hasEmbeddedSubs: $hasEmbeddedSubs,
             colorTransfer: $colorTransfer,

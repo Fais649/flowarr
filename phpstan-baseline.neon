@@ -163,18 +163,6 @@ parameters:
 			path: app/Models/JobWorkerLimit.php
 
 		-
-			message: '#^Missing parameter \$fileExtension \(string\) in call to App\\Services\\MediaProbeResult constructor\.$#'
-			identifier: argument.missing
-			count: 1
-			path: app/Services/MediaProbeService.php
-
-		-
-			message: '#^Unknown parameter \$extension in call to App\\Services\\MediaProbeResult constructor\.$#'
-			identifier: argument.unknown
-			count: 1
-			path: app/Services/MediaProbeService.php
-
-		-
 			message: '#^Call to an undefined method App\\Jobs\\Contracts\\DispatchableJob&Illuminate\\Contracts\\Queue\\ShouldQueue\:\:setExecutionId\(\)\.$#'
 			identifier: method.notFound
 			count: 1

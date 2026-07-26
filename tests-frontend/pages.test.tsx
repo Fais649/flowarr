@@ -127,6 +127,8 @@ describe('Appearance', () => {
 describe('Dashboard', () => {
     const baseProps = {
         metrics: { libraryCount: 3, pendingExecutions: 5, failedToday: 1, processingCount: 2 },
+        processingExecutions: [],
+        queuedByType: [],
         recentExecutions: [
             { id: 1, file_path: '/movies/test.mp4', status: 'completed', library: 'Movies', job_type: 'transcode', created_at: '2026-07-26T10:00:00Z' },
         ],
