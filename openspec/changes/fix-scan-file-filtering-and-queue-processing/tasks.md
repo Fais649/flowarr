@@ -4,6 +4,13 @@
 - [x] 1.2 Check scheduler (`app/Console/Kernel.php` or `routes/console.php`) for `app:scan-library-command` references and replace with `scan:libraries`
 - [x] 1.3 Remove the `app:scan-library-command` signature from console kernel if registered there
 
+## 1b. Additional Scanner Fixes
+
+- [x] 1.4 Remove `ts` from VIDEO_EXTENSIONS — conflicts with TypeScript (.d.ts → ext=ts)
+- [x] 1.5 Add directory exclusion for `node_modules`, `.git`, `vendor`, `.bun`, `.npm`, `.yarn`, `.pnpm`, `__pycache__`, `.cache`
+- [x] 1.6 Add `ScanLibraries` stuck-SCANNING recovery — reset libs stuck >5min back to PENDING_SCAN
+- [x] 1.7 Fix `needsTranscode()` and `hasEmbeddedSubtitles()` to return false when probe returns no video
+
 ## 2. Fix ScannerService Subtitle Logic
 
 - [x] 2.1 Make `ScannerService::VIDEO_EXTENSIONS` a public constant or move to `MediaProbeService` for sharing
