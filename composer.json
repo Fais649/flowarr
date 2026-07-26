@@ -103,6 +103,10 @@
         ],
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
+        ],
+        "queue": [
+            "Composer\\Config::disableProcessTimeout",
+            "php artisan queue:work --queue=transcode,subtitle --sleep=3 --tries=3"
         ]
     },
     "extra": {

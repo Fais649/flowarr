@@ -8,7 +8,6 @@ import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
-import { edit as editWorkerSettings } from '@/routes/workers';
 import type { NavItem } from '@/types';
 
 const sidebarNavItems: NavItem[] = [
@@ -25,11 +24,6 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'Appearance',
         href: editAppearance(),
-        icon: null,
-    },
-    {
-        title: 'Workers',
-        href: editWorkerSettings(),
         icon: null,
     },
 ];
