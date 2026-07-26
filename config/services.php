@@ -38,7 +38,7 @@ return [
     'ffmpeg' => [
         'bin' => env('FFMPEG_BIN', 'ffmpeg'),
         'use_nvenc' => env('FFMPEG_USE_NVENC', true),
-        'video_filter' => env('FFMPEG_VIDEO_FILTER', 'format=yuv420p'),
+        'video_filter' => env('FFMPEG_VIDEO_FILTER'), // null = auto-detect HDR vs SDR
     ],
 
     'mkvmerge' => [

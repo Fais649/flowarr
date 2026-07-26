@@ -30,9 +30,17 @@ class MediaProbeService
         $firstVideo = $videos->first();
 
         $videoCodec = $firstVideo?->get('codec_name');
+        $colorTransfer = $firstVideo?->get('color_transfer');
+        $bitsPerRawSample = $firstVideo?->get('bits_per_raw_sample');
         $hasEmbeddedSubs = collect($streams->all())->contains(
             fn ($s) => $s->get('codec_type') === 'subtitle');
 
-        return new MediaProbeResult($extension, $videoCodec, $hasEmbeddedSubs);
+        return new MediaProbeResult(
+            extension: $extension,
+            videoCodec: $videoCodec,
+            hasEmbeddedSubs: $hasEmbeddedSubs,
+            colorTransfer: $colorTransfer,
+            bitsPerRawSample: $bitsPerRawSample !== null ? (int) $bitsPerRawSample : null,
+        );
     }
 }

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Jobs\Concerns\TracksExecution;
 use App\Jobs\Contracts\DispatchableJob;
+use App\Services\MediaProbeService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
@@ -23,6 +24,8 @@ class TranscodeMediaJob implements DispatchableJob, ShouldQueue
         $this->onQueue(config('queue.queues.transcode', 'transcode'));
         $this->setExecutionId($executionId);
     }
+
+    private const HDR_FILTER = 'zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p';
 
     public function handle(): void
     {
@@ -46,7 +49,7 @@ class TranscodeMediaJob implements DispatchableJob, ShouldQueue
             config('services.ffmpeg.bin', 'ffmpeg'),
             '-y',
             '-i', $inputPath,
-            '-vf', config('services.ffmpeg.video_filter', 'zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p'),
+            '-vf', $this->resolveVideoFilter($inputPath),
             '-c:v', $videoCodec,
             '-preset', $preset,
             '-c:a', 'copy',
@@ -92,6 +95,29 @@ class TranscodeMediaJob implements DispatchableJob, ShouldQueue
 
         $this->markExecutionAsCompleted();
         Log::info("Transcode successful {$outputPath}");
+    }
+
+    private function resolveVideoFilter(string $filePath): string
+    {
+        // Allow env override for full control
+        $envFilter = config('services.ffmpeg.video_filter');
+        if ($envFilter !== null && $envFilter !== '') {
+            return $envFilter;
+        }
+
+        // Auto-detect HDR — probe the file
+        try {
+            $probe = app(MediaProbeService::class)->probe($filePath);
+            if ($probe->isHdr()) {
+                Log::info("HDR detected for {$filePath}, applying tonemap filter");
+
+                return self::HDR_FILTER;
+            }
+        } catch (\Throwable $e) {
+            Log::warning("Probe failed for HDR detection on {$filePath}: {$e->getMessage()}");
+        }
+
+        return 'format=yuv420p';
     }
 
     /** @phpstan-impure */
