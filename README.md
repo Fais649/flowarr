@@ -1,4 +1,5 @@
 <div align="center">
+  <img src=".github/logo.svg" alt="Flowarr" width="96" height="96">
   <h1>Flowarr</h1>
   <p>Self-hosted media library file transformation automation</p>
   <p>
