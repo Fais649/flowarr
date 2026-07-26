@@ -17,6 +17,12 @@ class ScanLibraries extends Command
 {
     public function handle(ScannerService $scanner): void
     {
+        // Reset any libraries stuck in SCANNING for more than 5 minutes
+        // (left over from a previously-crashed scan)
+        Library::where('status', LibraryStatus::SCANNING)
+            ->where('updated_at', '<', now()->subMinutes(5))
+            ->update(['status' => LibraryStatus::PENDING_SCAN]);
+
         $libraries = Library::dueForScan()->get();
 
         if ($libraries->isEmpty()) {

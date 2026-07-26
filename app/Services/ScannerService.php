@@ -47,6 +47,19 @@ class ScannerService
         }
     }
 
+    /** Directory basenames whose contents are never media files. */
+    private const EXCLUDED_DIRS = [
+        'node_modules',
+        '.git',
+        'vendor',
+        '.bun',
+        '.npm',
+        '.yarn',
+        '.pnpm',
+        '__pycache__',
+        '.cache',
+    ];
+
     private function collectMediaFiles(string $dir): array
     {
         $files = [];
@@ -60,6 +73,11 @@ class ScannerService
         );
 
         foreach ($iterator as $file) {
+            // Skip files inside excluded directories (node_modules, .git, vendor, etc.)
+            if ($this->isInExcludedDir($file->getPathname())) {
+                continue;
+            }
+
             if ($file->isFile()) {
                 $ext = strtolower($file->getExtension());
                 if (! in_array($ext, $allowedExts)) {
@@ -79,6 +97,18 @@ class ScannerService
         }
 
         return $files;
+    }
+
+    private function isInExcludedDir(string $path): bool
+    {
+        $parts = explode(DIRECTORY_SEPARATOR, $path);
+        foreach ($parts as $part) {
+            if (in_array($part, self::EXCLUDED_DIRS, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isJobNeededForFile(string $filePath, LibraryJobId $jobId): bool
