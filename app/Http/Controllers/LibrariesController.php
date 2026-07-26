@@ -43,7 +43,7 @@ class LibrariesController extends Controller
         Library::create([
             'base_path' => $request->base_path,
             'scan_interval' => $request->scan_interval,
-            'status' => LibraryStatus::PENDING,
+            'status' => LibraryStatus::PENDING_SCAN,
         ]);
 
         return redirect()->route('libraries.index');

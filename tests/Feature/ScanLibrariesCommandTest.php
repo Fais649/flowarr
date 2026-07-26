@@ -80,3 +80,54 @@ it('updates library last_scan after scanning', function () {
     expect($library->last_scan)->not->toBeNull();
     expect(Execution::where('library_job_id', $libraryJob->id)->count())->toBeGreaterThanOrEqual(1);
 });
+
+it('scans PENDING libraries whose interval has elapsed', function () {
+    $library = Library::factory()->create([
+        'base_path' => $this->mediaDir,
+        'status' => LibraryStatus::PENDING,
+        'last_scan' => now()->subHours(2),
+        'scan_interval' => 60,
+    ]);
+    $library->libraryJobs()->create(['job_id' => LibraryJobId::TRANSCODE_MEDIA]);
+
+    $this->artisan('scan:libraries')->assertSuccessful();
+
+    $executions = Execution::whereHas(
+        'libraryJob', fn ($q) => $q->where('library_id', $library->id)
+    )->get();
+    expect($executions)->not->toBeEmpty();
+});
+
+it('skips PENDING libraries whose interval has not elapsed', function () {
+    $library = Library::factory()->create([
+        'base_path' => $this->mediaDir,
+        'status' => LibraryStatus::PENDING,
+        'last_scan' => now(),
+        'scan_interval' => 3600,
+    ]);
+    $library->libraryJobs()->create(['job_id' => LibraryJobId::TRANSCODE_MEDIA]);
+
+    $this->artisan('scan:libraries')->assertSuccessful();
+
+    $executions = Execution::whereHas(
+        'libraryJob', fn ($q) => $q->where('library_id', $library->id)
+    )->get();
+    expect($executions)->toBeEmpty();
+});
+
+it('scans PENDING_SCAN libraries regardless of interval', function () {
+    $library = Library::factory()->create([
+        'base_path' => $this->mediaDir,
+        'status' => LibraryStatus::PENDING_SCAN,
+        'last_scan' => now(),
+        'scan_interval' => 3600,
+    ]);
+    $library->libraryJobs()->create(['job_id' => LibraryJobId::TRANSCODE_MEDIA]);
+
+    $this->artisan('scan:libraries')->assertSuccessful();
+
+    $executions = Execution::whereHas(
+        'libraryJob', fn ($q) => $q->where('library_id', $library->id)
+    )->get();
+    expect($executions)->not->toBeEmpty();
+});

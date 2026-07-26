@@ -57,12 +57,12 @@ class Library extends Model
     protected function dueForScan(Builder $query): void
     {
         $query->with('libraryJobs')
-            ->whereIn('status', [LibraryStatus::PENDING_SCAN])
-            ->where(
-                function (Builder $q): void {
-                    $q->whereNull('last_scan')->orWhereRaw('EXTRACT(EPOCH FROM NOW() - last_scan) >= scan_interval');
-                }
-            )
+            ->whereIn('status', [LibraryStatus::PENDING, LibraryStatus::PENDING_SCAN])
+            ->where(function (Builder $q): void {
+                $q->where('status', LibraryStatus::PENDING_SCAN)
+                    ->orWhereNull('last_scan')
+                    ->orWhereRaw('EXTRACT(EPOCH FROM NOW() - last_scan) >= scan_interval');
+            })
             ->has('libraryJobs');
     }
 }
