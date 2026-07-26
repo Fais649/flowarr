@@ -77,7 +77,17 @@ class TranscodeMediaJob implements DispatchableJob, ShouldQueue
         if (! $process->isSuccessful()) {
             $this->markExecutionAsFailed();
 
-            throw new \RuntimeException($process->getErrorOutput());
+            $errorOutput = $process->getErrorOutput();
+            // Strip ffmpeg version/configuration banner, keep only actual error lines
+            $lines = explode("\n", $errorOutput);
+            $errorLines = array_filter($lines, fn ($line) => preg_match('/\[error\]|Error |Unknown |Unrecognized|No such/i', $line));
+            $message = ! empty($errorLines)
+                ? implode("\n", $errorLines)
+                : ($lines[count($lines) - 2] ?? $errorOutput);
+
+            Log::error("Transcode failed for {$this->filePath}: {$message}");
+
+            throw new \RuntimeException($message);
         }
 
         $this->markExecutionAsCompleted();

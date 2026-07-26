@@ -37,7 +37,7 @@ return [
 
     'ffmpeg' => [
         'bin' => env('FFMPEG_BIN', 'ffmpeg'),
-        'use_nvenc' => env('FFMPEG_USE_NVENC', true),
+        'use_nvenc' => env('FFMPEG_USE_NVENC', false),
         'video_filter' => env('FFMPEG_VIDEO_FILTER', 'zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p'),
     ],
 
