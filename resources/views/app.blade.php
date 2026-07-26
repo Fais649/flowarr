@@ -30,16 +30,14 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cg fill='%237C3AED'%3E%3Cellipse cx='24' cy='10' rx='6' ry='10' transform='rotate(0 24 24)' opacity='0.9'/%3E%3Cellipse cx='24' cy='10' rx='6' ry='10' transform='rotate(72 24 24)' opacity='0.85'/%3E%3Cellipse cx='24' cy='10' rx='6' ry='10' transform='rotate(144 24 24)' opacity='0.9'/%3E%3Cellipse cx='24' cy='10' rx='6' ry='10' transform='rotate(216 24 24)' opacity='0.85'/%3E%3Cellipse cx='24' cy='10' rx='6' ry='10' transform='rotate(288 24 24)' opacity='0.9'/%3E%3Ccircle cx='24' cy='24' r='4' opacity='0.95'/%3E%3C/g%3E%3C/svg%3E" sizes="any">
 
         @fonts
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
+            <title>{{ config('app.name', 'Flowarr') }}</title>
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">

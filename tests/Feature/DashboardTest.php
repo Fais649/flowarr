@@ -2,9 +2,9 @@
 
 use App\Models\User;
 
-test('guests are redirected to the login page', function () {
+test('guests are redirected to the onboarding wizard when no users exist', function () {
     $response = $this->get(route('dashboard'));
-    $response->assertRedirect(route('login'));
+    $response->assertRedirect('/register');
 });
 
 test('authenticated users can visit the dashboard', function () {

@@ -1,11 +1,15 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/react-starter-kit",
+    "name": "flowarr/flowarr",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Self-hosted media library file transformation automation. Transcoder, subtitle extractor, and Jellyfin-aware pause/resume.",
     "keywords": [
-        "laravel",
-        "framework"
+        "media",
+        "transcoding",
+        "hevc",
+        "subtitle-extraction",
+        "jellyfin",
+        "laravel"
     ],
     "license": "MIT",
     "require": {
@@ -70,6 +74,7 @@
             "npm run lint:check",
             "npm run format:check",
             "npm run types:check",
+            "bun run test",
             "@test"
         ],
         "types:check": [

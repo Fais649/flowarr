@@ -2,26 +2,32 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\TracksExecution;
+use App\Jobs\Contracts\DispatchableJob;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
-class TranscodeMediaJob implements ShouldQueue
+class TranscodeMediaJob implements DispatchableJob, ShouldQueue
 {
     use Queueable;
+    use TracksExecution;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct(public string $filePath, protected ?Process $process = null) {}
+    public function __construct(
+        public string $filePath,
+        protected ?Process $process = null,
+        ?int $executionId = null,
+    ) {
+        $this->onQueue(config('queue.queues.transcode', 'transcode'));
+        $this->setExecutionId($executionId);
+    }
 
-    /**
-     * Execute the job.
-     */
     public function handle(): void
     {
+        $this->markExecutionAsProcessing();
+
         $inputPath = $this->filePath;
         $outputPath = preg_replace('/(\.[^.]+)$/', 'HEVC$1', $inputPath);
 
@@ -55,10 +61,10 @@ class TranscodeMediaJob implements ShouldQueue
         }
 
         while ($process->isRunning()) {
-            if (Cache::get('media_processing_paused')) {
+            if ($this->shouldPause()) {
                 posix_kill($process->getPid(), SIGSTOP);
 
-                while (Cache::get('media_processing_paused')) {
+                while ($this->shouldPause()) {
                     sleep(2);
                 }
 
@@ -69,8 +75,18 @@ class TranscodeMediaJob implements ShouldQueue
         }
 
         if (! $process->isSuccessful()) {
+            $this->markExecutionAsFailed();
+
             throw new \RuntimeException($process->getErrorOutput());
         }
+
+        $this->markExecutionAsCompleted();
         Log::info("Transcode successful {$outputPath}");
+    }
+
+    /** @phpstan-impure */
+    protected function shouldPause(): bool
+    {
+        return Cache::get('media_processing_paused') || Cache::get('active_streams', 0) > 0;
     }
 }

@@ -2,16 +2,20 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\TracksExecution;
+use App\Jobs\Contracts\DispatchableJob;
 use Closure;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
-class ExtractSubtitlesJob implements ShouldQueue
+class ExtractSubtitlesJob implements DispatchableJob, ShouldQueue
 {
     use Queueable;
+    use TracksExecution;
 
     private const TEXT_BASED_CODECS = [
         'subrip',
@@ -24,10 +28,16 @@ class ExtractSubtitlesJob implements ShouldQueue
     public function __construct(
         public string $filePath,
         protected ?Closure $processFactory = null,
-    ) {}
+        ?int $executionId = null,
+    ) {
+        $this->onQueue(config('queue.queues.subtitle', 'subtitle'));
+        $this->setExecutionId($executionId);
+    }
 
     public function handle(): void
     {
+        $this->markExecutionAsProcessing();
+
         if (! file_exists($this->filePath)) {
             Log::error(sprintf('Target file does not exist or is inaccessible: %s', $this->filePath));
 
@@ -98,7 +108,19 @@ class ExtractSubtitlesJob implements ShouldQueue
                 ];
 
                 $extract = $factory($extractCommand);
-                $extract->run();
+                $extract->setTimeout(null);
+                $extract->start();
+                while ($extract->isRunning()) {
+                    if ($this->shouldPause()) {
+                        posix_kill($extract->getPid(), SIGSTOP);
+                        while ($this->shouldPause()) {
+                            sleep(2);
+                        }
+                        posix_kill($extract->getPid(), SIGCONT);
+                    }
+                    $extract->checkTimeout();
+                    usleep(200000);
+                }
 
                 if ($extract->isSuccessful()) {
                     Log::info(sprintf('Successfully extracted sidecar track %s to %s', $index, $outputPath));
@@ -116,7 +138,19 @@ class ExtractSubtitlesJob implements ShouldQueue
                 ];
 
                 $stripProcess = $factory($stripCommand);
-                $stripProcess->run();
+                $stripProcess->setTimeout(null);
+                $stripProcess->start();
+                while ($stripProcess->isRunning()) {
+                    if ($this->shouldPause()) {
+                        posix_kill($stripProcess->getPid(), SIGSTOP);
+                        while ($this->shouldPause()) {
+                            sleep(2);
+                        }
+                        posix_kill($stripProcess->getPid(), SIGCONT);
+                    }
+                    $stripProcess->checkTimeout();
+                    usleep(200000);
+                }
 
                 if ($stripProcess->isSuccessful()) {
                     if (file_exists($outputFile) && filesize($outputFile) > 0) {
@@ -132,6 +166,7 @@ class ExtractSubtitlesJob implements ShouldQueue
             }
 
         } catch (Exception $e) {
+            $this->markExecutionAsFailed();
             Log::error(sprintf('ExtractSubtitlesJob Exception encountered: %s', $e->getMessage()));
         } finally {
             if (isset($outputFile) && file_exists($outputFile)) {
@@ -139,6 +174,13 @@ class ExtractSubtitlesJob implements ShouldQueue
             }
         }
 
+        $this->markExecutionAsCompleted();
         Log::info(sprintf('Finished processing subtitles for %s', $this->filePath));
+    }
+
+    /** @phpstan-impure */
+    protected function shouldPause(): bool
+    {
+        return Cache::get('media_processing_paused') || Cache::get('active_streams', 0) > 0;
     }
 }

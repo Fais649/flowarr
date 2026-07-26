@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Laravel\Fortify\Features;
 
 beforeEach(function () {
@@ -22,4 +23,18 @@ test('new users can register', function () {
 
     $this->assertAuthenticated();
     $response->assertRedirect(route('dashboard', absolute: false));
+});
+
+test('registration is blocked when an admin account already exists', function () {
+    User::factory()->create();
+
+    $response = $this->post(route('register.store'), [
+        'name' => 'Another User',
+        'email' => 'another@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ]);
+
+    $response->assertForbidden();
+    $this->assertGuest();
 });

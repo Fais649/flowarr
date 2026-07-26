@@ -19,6 +19,10 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input): User
     {
+        if (User::exists()) {
+            abort(403, 'Registration is disabled. An admin account already exists.');
+        }
+
         Validator::make($input, [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),

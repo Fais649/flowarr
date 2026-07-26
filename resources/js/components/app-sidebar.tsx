@@ -1,5 +1,12 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import {
+    BookOpen,
+    FolderGit2,
+    LayoutGrid,
+    ListChecks,
+    Telescope,
+    Truck,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -24,16 +31,29 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-const footerNavItems: NavItem[] = [
+const managementNavItems: NavItem[] = [
     {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
+        title: 'Libraries',
+        href: '/libraries',
+        icon: Telescope,
     },
     {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
+        title: 'Executions',
+        href: '/executions',
+        icon: ListChecks,
+    },
+    {
+        title: 'Workers',
+        href: '/workers',
+        icon: Truck,
+    },
+];
+
+const footerNavItems: NavItem[] = [
+    {
+        title: 'GitHub',
+        href: 'https://github.com/Fais649/flowarr',
+        icon: FolderGit2,
     },
 ];
 
@@ -54,6 +74,7 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
+                <NavMain items={managementNavItems} groupLabel="Management" />
             </SidebarContent>
 
             <SidebarFooter>

@@ -15,8 +15,6 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Symfony\Component\Finder\Finder;
 
-use function Symfony\Component\Clock\now;
-
 #[Signature('app:scan-library-command')]
 #[Description('Scans the media library and enqueues any files that need processing.')]
 class ScanLibraryCommand extends Command

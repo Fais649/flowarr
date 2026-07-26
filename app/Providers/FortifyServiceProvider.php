@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -63,9 +64,15 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        Fortify::registerView(fn () => Inertia::render('auth/register', [
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
-        ]));
+        Fortify::registerView(function () {
+            if (User::exists()) {
+                return redirect()->to('/login');
+            }
+
+            return Inertia::render('auth/register', [
+                'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            ]);
+        });
 
     }
 

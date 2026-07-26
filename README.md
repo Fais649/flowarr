@@ -1,47 +1,84 @@
-# Flowarr - Media Library File Transformation Automations made simple
+<div align="center">
+  <h1>Flowarr</h1>
+  <p>Self-hosted media library file transformation automation</p>
+  <p>
+    <a href="#features">Features</a> •
+    <a href="#quickstart">Quickstart</a> •
+    <a href="#architecture">Architecture</a> •
+    <a href="#contributing">Contributing</a>
+  </p>
+  <p>
+    <a href="https://github.com/fais/flowarr/actions"><img src="https://github.com/fais/flowarr/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+  </p>
+</div>
 
-I have a media server running on my steam deck, and it works well, but I had two problems:
-- Transcoding media on-the-fly was a bit too much for the little guy to handle (especially if more than one stream was happening at a time)
-- I was low on space and couldn't expand storage at the moment
+Flowarr automates media file transformations for private media servers running Jellyfin/Plex. It watches filesystem directories, runs configurable jobs (transcoding, subtitle extraction), and pauses all processing when Jellyfin streams are active to avoid GPU contention.
 
-I noticed the majority of my library was in h.264, and by transcoding to hevc, I could reduce disk space by like 60%.
-I also noticed that I had a lot of .ass subtitle files, which wasn't something all clients could handle, causing streams that would otherwise
-be direct streams to need to have their .ass subtitles in .srt transcoded.
+Built for the Steam Deck media server problem: transcode h.264 → HEVC for ~60% space savings, extract ASS/SSA subtitles to SRT sidecars for direct-play compatibility.
 
-So I needed a tool to let me fix these two problems easily. An automation tool that could:
-- Transcode all existing and new files to my target format (hevc)
-- Extract all subtitle streams from my videos and transform them all to .srt's.
-- Pause all work whenever a stream starts on Jellyfin
+## Features
 
-I tried Unmanic, and it would work, but for some reason GPU passthrough was being weird and the workers would often just stall and fail randomly.
-I tried Tdarr, but it was so scary and complex I uninstalled immediately.
+- **GPU-Accelerated Transcoding**: HDR→SDR tonemapped HEVC encoding via NVENC (with libx265 fallback)
+- **Subtitle Extraction**: Extract text-based subtitles (SRT, ASS, SSA, WebVTT) to sidecar files, strip internal subtitle tracks
+- **Subtitle Conversion**: Convert non-SRT subtitle files (VTT, ASS) to SRT
+- **Jellyfin Webhook Integration**: Auto-pause all processing when Jellyfin streams are active, resume when they stop
+- **Library Management**: Multiple media directories with per-library job configuration and scan intervals
+- **Execution Tracking**: Full lifecycle tracking from queued → processing → completed/failed
+- **Queue-backed Jobs**: RabbitMQ or database-backed job queues with per-job-type routing
+- **Web UI**: Dashboard, library management, execution monitoring via Inertia + React
+- **Authentication**: Registration, login, passkeys (WebAuthn), email verification, 2FA/TOTP
 
-This seemed like a simple problem. I didn't need an entire world of plugins and worker nodes and clusters of machines...
+## Tech Stack
 
-So I decided I'll just go ahead and try building it myself.
+| Layer | Technology |
+|-------|-----------|
+| Backend | PHP 8.5, Laravel 13, Fortify |
+| Frontend | React 19, Inertia v3, TypeScript, Tailwind v4, shadcn/ui |
+| Database | PostgreSQL 18 |
+| Queue | RabbitMQ or database driver |
+| Cache | Redis |
+| Search | Meilisearch |
+| Containers | Laravel Sail (Docker Compose) |
 
-And so, Flowarr was born.
+## Quickstart
 
-# Current State
-Literally completely non-functional, still scaffolding out the architecture
-# Features/Roadmap - Ordered by priority
-- [ ] Multi-Directory support (Run certain jobs only on certain folders)
-- [ ] Transcode Worker
-- [ ] Extract Embedded Subtitles Worker
-- [ ] Convert Subtitle to SRT Worker
-- [ ] Simple and clean Admin UI
-- [ ] GPU-Accelerated File Transformations
-- [ ] Start/Stop Worker Webhook
-- [ ] SMB mount storage support
-- [ ] Customizable File Rules
-- [ ] Filewatcher that detects changes/additions to watched folder and auto-runs transformations
-# Quickstart
-- Clone the repo
-- ./vendor/bin/sail up -d
-# Contributing
-- Fork the repo
-- Make a branch
-- Make changes
-- Commit changes
-- Submit pull request
-- Wait
+```bash
+git clone https://github.com/fais/flowarr
+cd flowarr
+cp .env.example .env
+./vendor/bin/sail up -d
+./vendor/bin/sail artisan key:generate
+./vendor/bin/sail artisan migrate
+./vendor/bin/sail artisan db:seed
+```
+
+The app will be available at `http://localhost`.
+
+### Development
+
+```bash
+./vendor/bin/sail bun run dev    # Vite dev server with hot reload
+./vendor/bin/sail artisan test   # Run tests
+```
+
+## Jellyfin Webhook Integration
+
+1. Install the **Webhook** plugin in Jellyfin
+2. Add a webhook pointed at `http://your-flowarr-host/webhooks/jellyfin`
+3. Select events: `Playback start` and `Playback stop`
+4. (Optional) Set `JELLYFIN_WEBHOOK_TOKEN` in `.env` to secure the endpoint
+
+When a stream starts, all running ffmpeg/mkvmerge processes are paused (SIGSTOP). They resume (SIGCONT) when the stream ends.
+
+## Architecture
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full entity schema, data flow, and implementation plan.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, test commands, and PR workflow.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

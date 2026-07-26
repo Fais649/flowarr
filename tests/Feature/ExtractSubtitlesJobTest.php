@@ -36,7 +36,11 @@ it('successfully extracts subtitles using a mock process', function () {
     ]]);
 
     $mock = Mockery::mock(Process::class);
-    $mock->shouldReceive('run')->times(3);
+    $mock->shouldReceive('run')->once();
+    $mock->shouldReceive('start')->twice();
+    $mock->shouldReceive('setTimeout')->with(null)->twice();
+    $mock->shouldReceive('isRunning')->times(4)->andReturn(true, false, true, false);
+    $mock->shouldReceive('checkTimeout')->twice();
     $mock->shouldReceive('isSuccessful')->times(3)->andReturn(true);
     $mock->shouldReceive('getErrorOutput')->andReturn('');
     $mock->shouldReceive('getOutput')->andReturn($probeOutput);

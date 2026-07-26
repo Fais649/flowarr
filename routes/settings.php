@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
+use App\Http\Controllers\Settings\WorkerSettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
@@ -13,6 +14,9 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('settings/workers', [WorkerSettingsController::class, 'edit'])->name('workers.edit');
+    Route::post('settings/workers', [WorkerSettingsController::class, 'update'])->name('workers.update');
 
     Route::get('settings/security', [SecurityController::class, 'edit'])
         ->name('security.edit');

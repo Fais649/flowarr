@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\LibraryJobId;
 use App\Models\Library;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -14,7 +15,7 @@ class LibraryJobFactory extends Factory
     {
         return [
             'library_id' => Library::factory(),
-            'job_id' => fake()->word(),
+            'job_id' => fake()->randomElement(LibraryJobId::cases())->value,
         ];
     }
 }

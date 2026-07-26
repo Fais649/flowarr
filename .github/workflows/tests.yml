@@ -57,8 +57,14 @@ jobs:
       - name: Build Assets
         run: npm run build
 
+      - name: Build Storybook
+        run: npm run build-storybook
+
       - name: Run Type Analysis
         run: composer types:check
+
+      - name: Frontend Tests
+        run: npm test
 
       - name: Tests
         run: php artisan test

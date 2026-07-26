@@ -17,6 +17,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Per-Job-Type Queues
+    |--------------------------------------------------------------------------
+    |
+    | Jobs are routed to named queues based on their type. Configure the queue
+    | name for each job type here. Workers can be started per queue to control
+    | concurrency independently.
+    |
+    */
+
+    'queues' => [
+        'transcode' => env('QUEUE_TRANSCODE', 'transcode'),
+        'subtitle' => env('QUEUE_SUBTITLE', 'subtitle'),
+        'default' => env('QUEUE_DEFAULT', 'default'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Queue Connections
     |--------------------------------------------------------------------------
     |
@@ -71,18 +88,6 @@ return [
             'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
             'block_for' => null,
             'after_commit' => false,
-        ],
-        'rabbitmq' => [
-            'driver' => 'rabbitmq',
-            'hosts' => [
-                [
-                    'host' => env('RABBITMQ_HOST', '127.0.0.1'),
-                    'port' => env('RABBITMQ_PORT', 5672),
-                    'user' => env('RABBITMQ_USER', 'guest'),
-                    'password' => env('RABBITMQ_PASSWORD', 'guest'),
-                    'vhost' => env('RABBITMQ_VHOST', '/'),
-                ],
-            ],
         ],
         'deferred' => [
             'driver' => 'deferred',

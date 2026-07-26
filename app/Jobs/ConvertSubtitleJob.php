@@ -2,29 +2,32 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\TracksExecution;
+use App\Jobs\Contracts\DispatchableJob;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
-class ConvertSubtitleJob implements ShouldQueue
+class ConvertSubtitleJob implements DispatchableJob, ShouldQueue
 {
     use Queueable;
+    use TracksExecution;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct(private string $filePath)
-    {
-        //
+    public function __construct(
+        private string $filePath,
+        ?int $executionId = null,
+    ) {
+        $this->onQueue(config('queue.queues.subtitle', 'subtitle'));
+        $this->setExecutionId($executionId);
     }
 
-    /**
-     * Execute the job.
-     */
     public function handle(): void
     {
+        $this->markExecutionAsProcessing();
+
         if (! file_exists($this->filePath)) {
             Log::error(sprintf('Target file does not exist or is inaccessible: %s', $this->filePath));
 
@@ -51,18 +54,41 @@ class ConvertSubtitleJob implements ShouldQueue
             ];
 
             $convert = new Process($convertCommand);
-            $convert->run();
+            $convert->setTimeout(null);
+            $convert->start();
+
+            while ($convert->isRunning()) {
+                if ($this->shouldPause()) {
+                    posix_kill($convert->getPid(), SIGSTOP);
+
+                    while ($convert->isRunning() && $this->shouldPause()) {
+                        sleep(2);
+                    }
+
+                    posix_kill($convert->getPid(), SIGCONT);
+                }
+                $convert->checkTimeout();
+                usleep(200000);
+            }
 
             if (! $convert->isSuccessful()) {
                 throw new Exception(sprintf('ffmpeg command failed: %s', $convert->getErrorOutput()));
             }
-        } catch (Exception $e) {
-            Log::error(sprintf('ProcessSubtitleJob Exception encountered: %s', $e->getMessage()));
-            throw $e;
-        } finally {
+
             unlink($this->filePath);
+        } catch (Exception $e) {
+            $this->markExecutionAsFailed();
+            Log::error(sprintf('ConvertSubtitleJob Exception encountered: %s', $e->getMessage()));
+            throw $e;
         }
 
+        $this->markExecutionAsCompleted();
         Log::info(sprintf('Finished converting subtitles for %s', $this->filePath));
+    }
+
+    /** @phpstan-impure */
+    protected function shouldPause(): bool
+    {
+        return Cache::get('media_processing_paused') || Cache::get('active_streams', 0) > 0;
     }
 }

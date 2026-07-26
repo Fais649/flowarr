@@ -214,6 +214,33 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 - Run tests: `vendor/bin/sail artisan test --compact` or filter: `vendor/bin/sail artisan test --compact --filter=testName`.
 - Do NOT delete tests without approval.
 
+=== frontend-tests rules ===
+
+# Frontend Testing (Vitest)
+
+- Frontend tests live in `tests-frontend/` and use Vitest + Testing Library + jsdom.
+- Run tests: `vendor/bin/sail bun run test`. Use `-- -t "pattern"` to filter.
+- Mock `@inertiajs/react` (Link, usePage, Form, router, Head) and Radix UI components for component tests.
+- Add `window.matchMedia` and `ResizeObserver` mocks to `tests-frontend/setup.ts` for Radix/ResizeObserver-dependent components.
+- Use `customRender` from `tests-frontend/helpers.tsx` when adding test wrappers.
+- For sidebar-dependent components, mock `@/components/ui/sidebar` in the test file with basic implementations.
+- Test files follow naming: `*.test.tsx` matching the source component name.
+
+=== storybook-rules ===
+
+# Storybook Component Catalog
+
+- This project uses Storybook v10 for isolated component development and visual verification.
+- **CRITICAL: After making any frontend change (components, pages, styles), you MUST visually verify it works.** Run `vendor/bin/sail bun run build-storybook` and check the output compiles without errors. If unsure about rendering, start the dev server with `vendor/bin/sail bun run storybook` (port 6006) and navigate to the relevant story/page.
+- **When creating or modifying a component**, you MUST also create or update a `.stories.tsx` file co-located with the component.
+- Use CSF 3 format: export a default `meta` object and named story exports.
+- Run `vendor/bin/sail bun run storybook` to start the dev server (defaults to port 6006).
+- Run `vendor/bin/sail bun run build-storybook` for a static export.
+- Stories import components from `@/components/` using the project's path alias.
+- For Radix-based components (sidebar, dropdowns), wrap stories in the required provider context (e.g., `SidebarProvider` for sidebar stories).
+- The preview applies the project's violet-flower theme and dark mode toggle. Use the toolbar to switch themes.
+- Story files should not test business logic — that's what Vitest is for. Stories verify visual rendering, layout, and component states.
+
 === inertia-react/core rules ===
 
 # Inertia + React

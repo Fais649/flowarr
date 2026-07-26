@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, usePage } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import PasskeyVerify from '@/components/passkey-verify';
 import PasswordInput from '@/components/password-input';
@@ -18,9 +18,21 @@ type Props = {
 };
 
 export default function Login({ status, canResetPassword }: Props) {
+    const { hasUsers } = usePage().props;
+
     return (
         <>
             <Head title="Log in" />
+
+            {!hasUsers && (
+                <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-center text-sm text-yellow-800 dark:border-yellow-800/30 dark:bg-yellow-900/20 dark:text-yellow-200">
+                    No admin account found.{' '}
+                    <TextLink href={register()}>
+                        Set up your admin account
+                    </TextLink>
+                    .
+                </div>
+            )}
 
             <PasskeyVerify />
 

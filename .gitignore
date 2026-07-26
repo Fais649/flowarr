@@ -27,3 +27,11 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+*storybook.log
+storybook-static
+/playwright-report
+/test-results
+/tests-browser/fixtures/auth-state.json
+# Local Pi runtime state
+.atl/
