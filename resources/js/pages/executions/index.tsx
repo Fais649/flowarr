@@ -48,8 +48,16 @@ return;
         router.post(`/executions/${execution.id}/retry`);
     };
 
+    const cancelLabel = (status: string) =>
+        status === 'processing' ? 'Abort' : 'Cancel';
+
+    const cancelConfirm = (status: string) =>
+        status === 'processing'
+            ? 'Abort this running job?'
+            : 'Cancel this queued job?';
+
     const handleCancel = (execution: Execution) => {
-        if (!confirm('Cancel this execution?')) {
+        if (!confirm(cancelConfirm(execution.status))) {
 return;
 }
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DebugController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\ExecutionsController;
 use App\Http\Controllers\JellyfinWebhookController;
@@ -41,6 +42,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('executions/{execution}', [ExecutionsController::class, 'show'])->name('executions.show');
     Route::post('executions/{execution}/retry', [ExecutionsController::class, 'retry'])->name('executions.retry');
     Route::post('executions/{execution}/cancel', [ExecutionsController::class, 'cancel'])->name('executions.cancel');
+
+    if (app()->isLocal()) {
+        Route::post('debug/restore-test-data', [DebugController::class, 'restoreTestData']);
+    }
 
     Route::get('workers', [WorkersController::class, 'index'])->name('workers.index');
     Route::get('workers/{worker}', [WorkersController::class, 'show'])->name('workers.show');

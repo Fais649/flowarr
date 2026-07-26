@@ -2,11 +2,28 @@ import { Head, Link } from '@inertiajs/react';
 import { EmptyState } from '@/components/empty-state';
 import { MetricCard } from '@/components/metric-card';
 import { StatusBadge } from '@/components/status-badge';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { dashboard } from '@/routes';
 
+type ProcessingExecution = {
+    id: number;
+    file_path: string;
+    job_type: string;
+    library: string;
+    started_at: string | null;
+    duration: number | null;
+};
+
+type QueuedByType = {
+    job_type: string;
+    count: number;
+};
+
 export default function Dashboard({
     metrics,
+    processingExecutions,
+    queuedByType,
     recentExecutions,
     libraries,
 }: {
@@ -16,6 +33,8 @@ export default function Dashboard({
         failedToday: number;
         processingCount: number;
     };
+    processingExecutions: ProcessingExecution[];
+    queuedByType: QueuedByType[];
     recentExecutions: {
         id: number;
         file_path: string;
@@ -62,6 +81,55 @@ export default function Dashboard({
                         }
                     />
                 </div>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Worker Activity</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {processingExecutions.length === 0 ? (
+                            <div className="space-y-2">
+                                <p className="text-sm text-muted-foreground">
+                                    No active workers.
+                                </p>
+                                {queuedByType.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {queuedByType.map((qt) => (
+                                            <Badge
+                                                key={qt.job_type}
+                                                variant="secondary"
+                                            >
+                                                {qt.job_type}: {qt.count} queued
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {processingExecutions.map((exec) => (
+                                    <div
+                                        key={exec.id}
+                                        className="flex items-center justify-between border-b pb-2 last:border-0"
+                                    >
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate text-sm font-medium">
+                                                {exec.file_path}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {exec.library} /{' '}
+                                                {exec.job_type}
+                                                {exec.duration !== null &&
+                                                    ` · ${exec.duration}m`}
+                                            </p>
+                                        </div>
+                                        <StatusBadge status="processing" />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
                 {libraries.length === 0 ? (
                     <EmptyState

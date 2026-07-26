@@ -19,6 +19,28 @@ class DashboardController extends Controller
             ->count();
         $processingCount = Execution::where('status', ExecutionStatus::PROCESSING)->count();
 
+        $processingExecutions = Execution::with('libraryJob.library')
+            ->where('status', ExecutionStatus::PROCESSING)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn (Execution $e) => [
+                'id' => $e->id,
+                'file_path' => $e->file_path,
+                'job_type' => $e->libraryJob?->job_id,
+                'library' => $e->libraryJob?->library?->base_path,
+                'started_at' => $e->started_at,
+                'duration' => $e->started_at ? now()->diffInMinutes($e->started_at) : null,
+            ]);
+
+        $queuedByType = Execution::where('status', ExecutionStatus::QUEUED)
+            ->with('libraryJob')
+            ->get()
+            ->groupBy(fn (Execution $e) => $e->libraryJob?->job_id ?? 'unknown')
+            ->map(fn ($group, $type) => [
+                'job_type' => $type,
+                'count' => $group->count(),
+            ])->values();
+
         $recentExecutions = Execution::with('libraryJob.library')
             ->orderBy('created_at', 'desc')
             ->limit(10)
@@ -47,6 +69,8 @@ class DashboardController extends Controller
                 'failedToday' => $failedToday,
                 'processingCount' => $processingCount,
             ],
+            'processingExecutions' => $processingExecutions,
+            'queuedByType' => $queuedByType,
             'recentExecutions' => $recentExecutions,
             'libraries' => $libraries,
         ]);

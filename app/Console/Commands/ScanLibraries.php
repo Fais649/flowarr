@@ -23,9 +23,19 @@ class ScanLibraries extends Command
             ->where('updated_at', '<', now()->subMinutes(5))
             ->update(['status' => LibraryStatus::PENDING_SCAN]);
 
+        // Log PENDING_SCAN libraries excluded by dueForScan for debugging
+        $pendingScanWithoutJobs = Library::where('status', LibraryStatus::PENDING_SCAN)
+            ->whereDoesntHave('libraryJobs')
+            ->get();
+        foreach ($pendingScanWithoutJobs as $lib) {
+            Log::info("Library {$lib->id} (PENDING_SCAN) not due for scan: no libraryJobs enabled");
+        }
+
         $libraries = Library::dueForScan()->get();
 
         if ($libraries->isEmpty()) {
+            Log::debug('scan:libraries — no libraries due for scan');
+
             return;
         }
 

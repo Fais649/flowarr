@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import type { FormEventHandler } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
@@ -12,6 +12,7 @@ import {
 } from '@/routes/config/workers';
 
 type Props = {
+    isLocal?: boolean;
     concurrency: {
         transcode_media: number;
         extract_subs: number;
@@ -126,6 +127,30 @@ export default function Workers({ concurrency, paused }: Props) {
                         </Button>
                     </div>
                 </form>
+
+                {isLocal && (
+                    <div className="border-t pt-6">
+                        <Heading
+                            variant="small"
+                            title="Debug Tools"
+                            description="Development-only actions"
+                        />
+                        <Button
+                            variant="destructive"
+                            onClick={() => {
+                                if (
+                                    confirm(
+                                        'Restore test data to original state? This will overwrite all test files.',
+                                    )
+                                ) {
+                                    router.post('/debug/restore-test-data');
+                                }
+                            }}
+                        >
+                            Restore Test Data
+                        </Button>
+                    </div>
+                )}
             </section>
             </div>
         </div>

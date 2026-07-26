@@ -5,9 +5,11 @@ namespace App\Providers;
 use Carbon\CarbonImmutable;
 use FFMpeg\FFMpeg;
 use FFMpeg\FFProbe;
+use Illuminate\Console\Events\ArtisanStarting;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -35,6 +37,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Event::listen(ArtisanStarting::class, function () {
+            DevCommands::artisan('queue:listen --tries=1 --timeout=0 --queue=transcode,subtitle,default', 'queue');
+        });
+
         $this->configureDefaults();
     }
 

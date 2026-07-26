@@ -20,6 +20,7 @@ class WorkerSettingsController extends Controller
                 'convert_sub' => Settings::concurrency('convert_sub'),
             ],
             'paused' => Settings::isPaused(),
+            'isLocal' => app()->isLocal(),
         ]);
     }
 
