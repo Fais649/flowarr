@@ -5,6 +5,7 @@ namespace App\Providers;
 use Carbon\CarbonImmutable;
 use FFMpeg\FFMpeg;
 use FFMpeg\FFProbe;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -17,6 +18,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        DevCommands::artisan('schedule:work', 'schedule');
+
         $this->app->bind(FFProbe::class, function () {
             return FFProbe::create();
         });
