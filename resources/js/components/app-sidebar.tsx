@@ -3,6 +3,7 @@ import {
     FolderGit2,
     LayoutGrid,
     ListChecks,
+    Settings2,
     Telescope,
     Truck,
 } from 'lucide-react';
@@ -49,6 +50,11 @@ const managementNavItems: NavItem[] = [
 ];
 
 const footerNavItems: NavItem[] = [
+    {
+        title: 'Configuration',
+        href: '/settings/workers',
+        icon: Settings2,
+    },
     {
         title: 'GitHub',
         href: 'https://github.com/Fais649/flowarr',
