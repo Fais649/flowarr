@@ -1,10 +1,4 @@
-# Community Standards
-
-## Purpose
-
-Provide clear guidelines and governance for contributors to ensure a welcoming, well-documented open-source project.
-
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Contributing Guide
 The project SHALL include a `CONTRIBUTING.md` that explains how to set up the development environment, run tests, follow code style, and submit changes.

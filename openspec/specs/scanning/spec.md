@@ -12,8 +12,13 @@ The system SHALL provide an Artisan command that scans all libraries due for sca
 #### Scenario: ScanLibraries command exists
 - **WHEN** running `php artisan scan:libraries`
 - **THEN** it SHALL query all libraries where `status` is not paused/stopped and `(last_scan + scan_interval) < now()`
+- **THEN** libraries SHALL be scanned concurrently up to the configured `scan.concurrency` limit
 - **THEN** each library SHALL be scanned for media files
 - **THEN** library status SHALL be set to `scanning` during scan and restored to `pending` after
+
+#### Scenario: Default scan interval
+- **WHEN** a new library is created
+- **THEN** its default `scan_interval` SHALL be 43200 seconds (12 hours)
 
 #### Scenario: Command scheduled
 - **WHEN** the scheduler runs
@@ -70,6 +75,13 @@ Queue jobs SHALL update their corresponding `Execution` record as they progress 
 - **THEN** the corresponding Execution status is updated to `failed`
 - **THEN** the `finished_at` timestamp is set
 
+### Requirement: Scan Concurrency Limit
+The system SHALL limit how many libraries scan simultaneously.
+
+#### Scenario: At the limit
+- **WHEN** the number of currently scanning libraries is at or above `scan.concurrency`
+- **THEN** additional libraries wait until a slot opens
+
 ### Requirement: Libraries in PENDING_SCAN Are Picked Up
 The `dueForScan` scope SHALL reliably pick up all libraries with status `PENDING_SCAN` that have enabled jobs.
 
@@ -82,3 +94,24 @@ The `dueForScan` scope SHALL reliably pick up all libraries with status `PENDING
 - **WHEN** a library has status `PENDING_SCAN` and at least one `libraryJob`
 - **THEN** it SHALL be picked up by `dueForScan` regardless of `last_scan`
 - **THEN** `scan:libraries` SHALL process it on the next tick
+
+### Requirement: Automated Re-scan Cycle
+The system SHALL automatically re-scan libraries on their configured `scan_interval` without requiring manual intervention.
+
+#### Scenario: Library re-scans after interval
+- **WHEN** a library has status `pending` and `(last_scan + scan_interval) < now()`
+- **THEN** the `scan:libraries` command SHALL pick it up for scanning
+- **THEN** status SHALL be set to `scanning` during scan
+- **THEN** after scan, status SHALL be restored to `pending` and `last_scan` updated
+
+#### Scenario: First scan on creation
+- **WHEN** a library is created with status `pending_scan` and no `last_scan`
+- **THEN** the next `scan:libraries` run SHALL pick it up immediately
+
+### Requirement: Manual Scan Trigger
+Users SHALL be able to trigger an immediate scan via the UI.
+
+#### Scenario: Trigger scan button
+- **WHEN** user clicks "Scan Now" on a library
+- **THEN** the library status SHALL be set to `pending_scan`
+- **THEN** the next `scan:libraries` run SHALL scan it regardless of interval

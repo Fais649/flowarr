@@ -1,10 +1,4 @@
-# CI Pipeline
-
-## Purpose
-
-Automate code quality verification and test execution to ensure every change meets project standards before merging.
-
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Continuous Integration
 The CI pipeline SHALL run on push and pull request events to the default branch.
@@ -16,13 +10,10 @@ The CI pipeline SHALL run on push and pull request events to the default branch.
 - **THEN** the CI workflow SHALL execute
 
 ### Requirement: Test Execution
-The CI pipeline SHALL run the full test suite using Pest against PHP 8.4 and 8.5.
+The CI pipeline SHALL run the full test suite using Pest.
 
-#### Scenario: Tests pass on supported PHP versions
-- **WHEN** the CI workflow runs on PHP 8.4
-- **THEN** it SHALL execute `vendor/bin/sail artisan test --compact`
-- **THEN** all tests SHALL pass with zero failures
-- **WHEN** the CI workflow runs on PHP 8.5
+#### Scenario: Tests pass
+- **WHEN** the CI workflow runs
 - **THEN** it SHALL execute `vendor/bin/sail artisan test --compact`
 - **THEN** all tests SHALL pass with zero failures
 

@@ -1,10 +1,4 @@
-# Project Identity
-
-## Purpose
-
-Establish a clear, unique identity for the project separate from any starter-kit defaults, with proper licensing and naming.
-
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Package Metadata
 The `composer.json` SHALL identify the project as `flowarr/flowarr` with an accurate description and relevant keywords.
