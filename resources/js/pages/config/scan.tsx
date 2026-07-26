@@ -24,12 +24,13 @@ export default function Scan({ concurrency }: Props) {
     };
 
     return (
-        <>
+        <div className="px-4 py-6">
             <Head title="Scan settings" />
 
             <h1 className="sr-only">Scan settings</h1>
 
-            <div className="space-y-6">
+            <div className="flex-1 md:max-w-2xl">
+            <section className="max-w-xl space-y-12">
                 <Heading
                     variant="small"
                     title="Scan settings"
@@ -71,8 +72,9 @@ export default function Scan({ concurrency }: Props) {
                         </Button>
                     </div>
                 </form>
+            </section>
             </div>
-        </>
+        </div>
     );
 }
 

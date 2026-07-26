@@ -56,12 +56,13 @@ export default function Workers({ concurrency, paused }: Props) {
     };
 
     return (
-        <>
+        <div className="px-4 py-6">
             <Head title="Worker settings" />
 
             <h1 className="sr-only">Worker settings</h1>
 
-            <div className="space-y-6">
+            <div className="flex-1 md:max-w-2xl">
+            <section className="max-w-xl space-y-12">
                 <Heading
                     variant="small"
                     title="Worker settings"
@@ -125,8 +126,9 @@ export default function Workers({ concurrency, paused }: Props) {
                         </Button>
                     </div>
                 </form>
+            </section>
             </div>
-        </>
+        </div>
     );
 }
 
