@@ -62,9 +62,19 @@ class ScannerService
         foreach ($iterator as $file) {
             if ($file->isFile()) {
                 $ext = strtolower($file->getExtension());
-                if (in_array($ext, $allowedExts)) {
-                    $files[] = $file->getPathname();
+                if (! in_array($ext, $allowedExts)) {
+                    continue;
                 }
+
+                // Skip files that look like they have a double extension
+                // (e.g. .d.ts -> pathinfo gives ext=ts but basename ends in .d)
+                $filename = $file->getFilename();
+                $nameWithoutExt = pathinfo($filename, PATHINFO_FILENAME);
+                if (str_contains($nameWithoutExt, '.')) {
+                    continue;
+                }
+
+                $files[] = $file->getPathname();
             }
         }
 
@@ -82,14 +92,36 @@ class ScannerService
 
     private function needsTranscode(string $filePath): bool
     {
-        $result = $this->probeService->probe($filePath);
+        try {
+            $result = $this->probeService->probe($filePath);
+        } catch (\Throwable $e) {
+            Log::warning("Probe failed for {$filePath}: {$e->getMessage()}");
+
+            return false;
+        }
+
+        // If FFProbe didn't identify video streams, skip
+        if (! $result->isVideo()) {
+            return false;
+        }
 
         return ! $result->isTargetVideoEncoding();
     }
 
     private function hasEmbeddedSubtitles(string $filePath): bool
     {
-        $result = $this->probeService->probe($filePath);
+        try {
+            $result = $this->probeService->probe($filePath);
+        } catch (\Throwable $e) {
+            Log::warning("Subtitle probe failed for {$filePath}: {$e->getMessage()}");
+
+            return false;
+        }
+
+        // Only check for embedded subs in actual video files
+        if (! $result->isVideo()) {
+            return false;
+        }
 
         return $result->hasEmbeddedSubtitles();
     }

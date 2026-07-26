@@ -10,7 +10,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('scan:cleanup')]
-#[Description('Delete QUEUED execution records for files with non-media extensions.')]
+#[Description('Delete QUEUED execution records for files that are not actually media files.')]
 class CleanupStaleExecutions extends Command
 {
     /**
@@ -29,15 +29,27 @@ class CleanupStaleExecutions extends Command
             ->chunk(100, function ($executions) use ($allowedExts, &$deleted): void {
                 foreach ($executions as $execution) {
                     $ext = strtolower(pathinfo($execution->file_path, PATHINFO_EXTENSION));
+                    $filename = pathinfo($execution->file_path, PATHINFO_FILENAME);
 
+                    // Delete if extension is not in allowlist
                     if (! in_array($ext, $allowedExts, true)) {
                         $execution->delete();
                         $deleted++;
-                        $this->line("Deleted: {$execution->file_path}");
+                        $this->line("Deleted [bad ext]: {$execution->file_path}");
+
+                        continue;
+                    }
+
+                    // Delete if filename itself contains a dot (double-extension like .d.ts)
+                    // Real media files have a single extension: video.ts, movie.mkv
+                    if (str_contains($filename, '.')) {
+                        $execution->delete();
+                        $deleted++;
+                        $this->line("Deleted [dotted name]: {$execution->file_path}");
                     }
                 }
             });
 
-        $this->info("Deleted {$deleted} stale QUEUED execution(s) with non-media extensions.");
+        $this->info("Deleted {$deleted} stale QUEUED execution(s).");
     }
 }
