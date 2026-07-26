@@ -59,7 +59,7 @@
 ## 9. Critical Test Coverage
 
 - [x] 9.1 Feature test for `ScanLibraries` (4 tests: creates executions, skips without jobs, dedup, updates last_scan)
-- [ ] 9.2 Feature test for settings profile controller — not implemented
-- [ ] 9.3 Feature test for settings security controller — not implemented
-- [ ] 9.4 Feature test for auth flows — not implemented
+- [x] 9.2 Feature test for settings profile controller — exists (ProfileUpdateTest.php, 5 tests)
+- [x] 9.3 Feature test for settings security controller — exists (SecurityTest.php, 4 tests)
+- [x] 9.4 Feature test for auth flows — exists (AuthenticationTest, OnboardingTest, PasswordResetTest, RegistrationTest, 16 tests)
 - [x] 9.5 Execution status update tests added to `TranscodeMediaJobTest`
