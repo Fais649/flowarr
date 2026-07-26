@@ -39,7 +39,7 @@ const jobTypes = [
     },
 ] as const;
 
-export default function Workers({ concurrency, paused }: Props) {
+export default function Workers({ concurrency, paused, isLocal }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         concurrency: {
             transcode_media: concurrency.transcode_media,
