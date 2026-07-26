@@ -15,7 +15,7 @@ export default function CreateLibrary({
     const [browserOpen, setBrowserOpen] = useState(false);
     const { data, setData, post, patch, processing, errors } = useForm({
         base_path: library?.base_path ?? '',
-        scan_interval: library?.scan_interval ?? 3600,
+        scan_interval: library?.scan_interval ?? 43200,
     });
 
     const submit = (e: React.FormEvent) => {

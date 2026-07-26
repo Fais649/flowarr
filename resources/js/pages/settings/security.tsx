@@ -2,6 +2,7 @@ import { Form, Head } from '@inertiajs/react';
 import { useRef } from 'react';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import Heading from '@/components/heading';
+import { SettingsNav } from '@/components/settings-nav';
 import InputError from '@/components/input-error';
 import type { Props as ManagePasskeysProps } from '@/components/manage-passkeys';
 import ManagePasskeys from '@/components/manage-passkeys';
@@ -21,6 +22,8 @@ export default function Security(props: Props) {
     return (
         <>
             <Head title="Security settings" />
+
+            <SettingsNav currentPath={window.location.pathname} />
 
             <h1 className="sr-only">Security settings</h1>
 

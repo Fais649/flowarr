@@ -2,6 +2,7 @@ import { Form, Head, usePage } from '@inertiajs/react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
+import { SettingsNav } from '@/components/settings-nav';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,8 @@ export default function Profile() {
     return (
         <>
             <Head title="Profile settings" />
+
+            <SettingsNav currentPath={window.location.pathname} />
 
             <h1 className="sr-only">Profile settings</h1>
 

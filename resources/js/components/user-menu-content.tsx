@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Settings, UserCog } from 'lucide-react';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -36,12 +36,26 @@ export function UserMenuContent({ user }: Props) {
                 <DropdownMenuItem asChild>
                     <Link
                         className="block w-full cursor-pointer"
-                        href={edit()}
+                        href="/settings/profile"
+                        prefetch
+                        onClick={cleanup}
+                    >
+                        <UserCog className="mr-2" />
+                        User Settings
+                    </Link>
+                </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+                <DropdownMenuItem asChild>
+                    <Link
+                        className="block w-full cursor-pointer"
+                        href="/settings/workers"
                         prefetch
                         onClick={cleanup}
                     >
                         <Settings className="mr-2" />
-                        Settings
+                        Configuration
                     </Link>
                 </DropdownMenuItem>
             </DropdownMenuGroup>

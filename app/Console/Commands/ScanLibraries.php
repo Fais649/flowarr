@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\LibraryStatus;
 use App\Models\Library;
 use App\Services\ScannerService;
+use App\Settings;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -22,7 +23,9 @@ class ScanLibraries extends Command
             return;
         }
 
-        foreach ($libraries as $library) {
+        $maxConcurrent = Settings::scanConcurrency();
+
+        foreach ($libraries->take($maxConcurrent) as $library) {
             Log::info("Scanning library {$library->id}: {$library->base_path}");
 
             $library->update(['status' => LibraryStatus::SCANNING]);

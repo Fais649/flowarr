@@ -5,6 +5,7 @@ use App\LibraryJobId;
 use App\LibraryStatus;
 use App\Models\Execution;
 use App\Models\Library;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\File;
 
@@ -113,6 +114,46 @@ it('skips PENDING libraries whose interval has not elapsed', function () {
         'libraryJob', fn ($q) => $q->where('library_id', $library->id)
     )->get();
     expect($executions)->toBeEmpty();
+});
+
+it('respects scan concurrency limit', function () {
+    Setting::set('scan.concurrency', '1');
+
+    $library1 = Library::factory()->create([
+        'base_path' => $this->mediaDir,
+        'status' => LibraryStatus::PENDING_SCAN,
+        'last_scan' => null,
+    ]);
+    $library1->libraryJobs()->create(['job_id' => LibraryJobId::TRANSCODE_MEDIA]);
+
+    $dir2 = storage_path('app/testing_scan_concurrency_'.uniqid());
+    File::makeDirectory($dir2, 0777, true, true);
+    $ffmpeg = config('services.ffmpeg.bin', 'ffmpeg');
+    exec("{$ffmpeg} -y -f lavfi -i color=c=black:s=320x240:d=1 -t 1 -c:v libx264 {$dir2}/video.mkv 2>&1 >/dev/null");
+
+    $library2 = Library::factory()->create([
+        'base_path' => $dir2,
+        'status' => LibraryStatus::PENDING_SCAN,
+        'last_scan' => null,
+    ]);
+    $library2->libraryJobs()->create(['job_id' => LibraryJobId::TRANSCODE_MEDIA]);
+
+    $this->artisan('scan:libraries')->assertSuccessful();
+
+    $library1->refresh();
+    $library2->refresh();
+
+    $scannedCount = 0;
+    if ($library1->last_scan !== null) {
+        $scannedCount++;
+    }
+    if ($library2->last_scan !== null) {
+        $scannedCount++;
+    }
+
+    expect($scannedCount)->toBe(1);
+
+    File::deleteDirectory($dir2);
 });
 
 it('scans PENDING_SCAN libraries regardless of interval', function () {
