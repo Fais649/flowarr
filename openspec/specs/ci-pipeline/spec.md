@@ -16,10 +16,13 @@ The CI pipeline SHALL run on push and pull request events to the default branch.
 - **THEN** the CI workflow SHALL execute
 
 ### Requirement: Test Execution
-The CI pipeline SHALL run the full test suite using Pest.
+The CI pipeline SHALL run the full test suite using Pest against PHP 8.4 and 8.5.
 
-#### Scenario: Tests pass
-- **WHEN** the CI workflow runs
+#### Scenario: Tests pass on supported PHP versions
+- **WHEN** the CI workflow runs on PHP 8.4
+- **THEN** it SHALL execute `vendor/bin/sail artisan test --compact`
+- **THEN** all tests SHALL pass with zero failures
+- **WHEN** the CI workflow runs on PHP 8.5
 - **THEN** it SHALL execute `vendor/bin/sail artisan test --compact`
 - **THEN** all tests SHALL pass with zero failures
 
