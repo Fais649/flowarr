@@ -6,6 +6,8 @@ use FFMpeg\FFProbe;
 
 class MediaProbeService
 {
+    public const VIDEO_EXTENSIONS = ['mkv', 'mp4', 'avi', 'mov', 'm4v', 'wmv', 'ts', 'mts'];
+
     public const SUBTITLE_EXTENSIONS = ['ass', 'ssa', 'sub', 'idx', 'sup', 'pgs'];
 
     public const TARGET_ENCODING = 'hevc';

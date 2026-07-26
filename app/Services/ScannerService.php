@@ -11,8 +11,6 @@ use Illuminate\Support\Facades\Log;
 
 class ScannerService
 {
-    private const VIDEO_EXTENSIONS = ['mkv', 'mp4', 'avi', 'mov', 'm4v', 'wmv', 'ts', 'mts'];
-
     public function __construct(
         private MediaProbeService $probeService,
     ) {}
@@ -56,10 +54,15 @@ class ScannerService
             new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
         );
 
+        $allowedExts = array_merge(
+            MediaProbeService::VIDEO_EXTENSIONS,
+            MediaProbeService::SUBTITLE_EXTENSIONS,
+        );
+
         foreach ($iterator as $file) {
             if ($file->isFile()) {
                 $ext = strtolower($file->getExtension());
-                if (in_array($ext, self::VIDEO_EXTENSIONS)) {
+                if (in_array($ext, $allowedExts)) {
                     $files[] = $file->getPathname();
                 }
             }
@@ -95,7 +98,21 @@ class ScannerService
     {
         $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
-        return in_array($ext, ['ass', 'ssa', 'webvtt', 'vtt', 'sub']);
+        // Only process files with known subtitle extensions
+        if (! in_array($ext, MediaProbeService::SUBTITLE_EXTENSIONS)) {
+            return false;
+        }
+
+        // Probe the file to verify it's actually a subtitle before dispatching
+        try {
+            $result = $this->probeService->probe($filePath);
+
+            return ! $result->isTargetSubtitleExtension();
+        } catch (\Throwable $e) {
+            Log::warning("Subtitle probe failed for {$filePath}: {$e->getMessage()}");
+
+            return false;
+        }
     }
 
     private function hasExistingExecution(string $filePath, int $libraryJobId): bool

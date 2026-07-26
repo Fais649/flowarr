@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Settings;
+namespace App\Http\Controllers\Config;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateWorkerSettingsRequest;
@@ -13,7 +13,7 @@ class WorkerSettingsController extends Controller
 {
     public function edit(): Response
     {
-        return Inertia::render('settings/workers', [
+        return Inertia::render('config/workers', [
             'concurrency' => [
                 'transcode_media' => Settings::concurrency('transcode_media'),
                 'extract_subs' => Settings::concurrency('extract_subs'),
@@ -33,6 +33,6 @@ class WorkerSettingsController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Worker settings updated.')]);
 
-        return to_route('workers.edit');
+        return to_route('config.workers.edit');
     }
 }

@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import {
     edit as editWorkerSettings,
     update as updateWorkerSettings,
-} from '@/routes/workers';
+} from '@/routes/config/workers';
 
 type Props = {
     concurrency: {

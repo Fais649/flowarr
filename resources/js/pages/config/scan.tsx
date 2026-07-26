@@ -5,7 +5,7 @@ import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { edit as editScan, update as updateScan } from '@/routes/scan';
+import { edit as editScan, update as updateScan } from '@/routes/config/scan';
 
 type Props = {
     concurrency: number;

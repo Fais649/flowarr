@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Settings;
+namespace App\Http\Controllers\Config;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateScanSettingsRequest;
@@ -13,7 +13,7 @@ class ScanSettingsController extends Controller
 {
     public function edit(): Response
     {
-        return Inertia::render('settings/scan', [
+        return Inertia::render('config/scan', [
             'concurrency' => Settings::scanConcurrency(),
         ]);
     }
@@ -24,6 +24,6 @@ class ScanSettingsController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Scan settings updated.']);
 
-        return to_route('scan.edit');
+        return to_route('config.scan.edit');
     }
 }

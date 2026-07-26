@@ -52,7 +52,7 @@ const managementNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [
     {
         title: 'Configuration',
-        href: '/settings/workers',
+        href: '/config/workers',
         icon: Settings2,
     },
     {
