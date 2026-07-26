@@ -10,6 +10,7 @@
 
 - [x] 2.1 Remove Chromatic workflow (`.github/workflows/chromatic.yml`) — no Chromatic project/token
 - [x] 2.2 Remove Chromatic deps from `package.json` (`chromatic`, `@chromatic-com/storybook`, `chromatic` script)
+- [x] 2.3 Remove `@chromatic-com/storybook` from `.storybook/main.ts` addons and regenerate lockfile
 
 ## 3. Update CI Pipeline Spec
 
@@ -21,4 +22,4 @@
 - [x] 4.1 Run `gh run list` and confirm new runs appear for tests and linter workflows
 - [x] 4.2 Confirm tests workflow passes on both PHP 8.4 and 8.5
 - [x] 4.3 Confirm chromatic workflow shows appropriate failure message (token missing)
-- [x] 4.4 Chromatic workflow removed — not applicable
+- [x] 4.4 All CI workflows green ✅

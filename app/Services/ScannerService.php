@@ -34,12 +34,16 @@ class ScannerService
             foreach ($enabledJobs as $libraryJob) {
                 $jobId = $libraryJob->job_id;
 
-                if ($this->isJobNeededForFile($filePath, $jobId)) {
-                    if ($this->hasExistingExecution($filePath, $libraryJob->id)) {
-                        continue;
-                    }
+                try {
+                    if ($this->isJobNeededForFile($filePath, $jobId)) {
+                        if ($this->hasExistingExecution($filePath, $libraryJob->id)) {
+                            continue;
+                        }
 
-                    $this->dispatchJob($filePath, $libraryJob, $jobId);
+                        $this->dispatchJob($filePath, $libraryJob, $jobId);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("Skipping file {$filePath} for job {$jobId->value}: {$e->getMessage()}");
                 }
             }
         }
