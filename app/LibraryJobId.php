@@ -3,9 +3,9 @@
 namespace App;
 
 use App\Jobs\ConvertSubtitleJob;
-use App\Jobs\DispatchableJob;
 use App\Jobs\ExtractSubtitlesJob;
 use App\Jobs\TranscodeMediaJob;
+use Illuminate\Contracts\Queue\ShouldQueue;
 
 enum LibraryJobId: string
 {
@@ -14,7 +14,7 @@ enum LibraryJobId: string
     case CONVERT_SUBTITLE = 'convert_sub';
 
     /**
-     * @return class-string<DispatchableJob>
+     * @return class-string<ShouldQueue>
      */
     public function getJobClass(): string
     {
