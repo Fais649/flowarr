@@ -3,7 +3,6 @@ import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileCo
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
-import { SettingsNav } from '@/components/settings-nav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,8 +19,6 @@ export default function Profile() {
     return (
         <>
             <Head title="Profile settings" />
-
-            <SettingsNav currentPath={window.location.pathname} />
 
             <h1 className="sr-only">Profile settings</h1>
 

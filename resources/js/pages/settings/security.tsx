@@ -6,7 +6,6 @@ import InputError from '@/components/input-error';
 import type { Props as ManagePasskeysProps } from '@/components/manage-passkeys';
 import ManagePasskeys from '@/components/manage-passkeys';
 import PasswordInput from '@/components/password-input';
-import { SettingsNav } from '@/components/settings-nav';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/security';
@@ -22,8 +21,6 @@ export default function Security(props: Props) {
     return (
         <>
             <Head title="Security settings" />
-
-            <SettingsNav currentPath={window.location.pathname} />
 
             <h1 className="sr-only">Security settings</h1>
 

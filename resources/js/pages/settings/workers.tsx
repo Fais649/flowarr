@@ -2,7 +2,6 @@ import { Head, useForm } from '@inertiajs/react';
 import type { FormEventHandler } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
-import { SettingsNav } from '@/components/settings-nav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,8 +58,6 @@ export default function Workers({ concurrency, paused }: Props) {
     return (
         <>
             <Head title="Worker settings" />
-
-            <SettingsNav currentPath={window.location.pathname} />
 
             <h1 className="sr-only">Worker settings</h1>
 

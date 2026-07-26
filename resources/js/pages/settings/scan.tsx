@@ -2,7 +2,6 @@ import { Head, useForm } from '@inertiajs/react';
 import type { FormEventHandler } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
-import { SettingsNav } from '@/components/settings-nav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,8 +26,6 @@ export default function Scan({ concurrency }: Props) {
     return (
         <>
             <Head title="Scan settings" />
-
-            <SettingsNav currentPath={window.location.pathname} />
 
             <h1 className="sr-only">Scan settings</h1>
 
