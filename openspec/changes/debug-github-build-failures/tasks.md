@@ -8,8 +8,8 @@
 
 ## 2. Fix Chromatic Workflow
 
-- [x] 2.1 Add token validation step before the Chromatic action — check `${{ secrets.CHROMATIC_PROJECT_TOKEN }}` is non-empty, fail with clear message if missing
-- [x] 2.2 Add `timeout-minutes: 10` to the chromatic job
+- [x] 2.1 Remove Chromatic workflow (`.github/workflows/chromatic.yml`) — no Chromatic project/token
+- [x] 2.2 Remove Chromatic deps from `package.json` (`chromatic`, `@chromatic-com/storybook`, `chromatic` script)
 
 ## 3. Update CI Pipeline Spec
 
@@ -21,4 +21,4 @@
 - [x] 4.1 Run `gh run list` and confirm new runs appear for tests and linter workflows
 - [x] 4.2 Confirm tests workflow passes on both PHP 8.4 and 8.5
 - [x] 4.3 Confirm chromatic workflow shows appropriate failure message (token missing)
-- [ ] 4.4 Set `CHROMATIC_PROJECT_TOKEN` in GitHub repo secrets and re-run chromatic workflow
+- [x] 4.4 Chromatic workflow removed — not applicable

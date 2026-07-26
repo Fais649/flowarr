@@ -31,7 +31,7 @@ The CI pipeline SHALL avoid redundant builds across workflows.
 - **WHEN** the tests workflow executes
 - **THEN** Storybook SHALL NOT be built during test execution
 - **WHEN** Storybook visual regression checking is needed
-- **THEN** it SHALL be handled exclusively by the Chromatic workflow
+- **THEN** it SHALL be configured as a separate workflow if reintroduced
 
 ### Requirement: Job Timeout Bounds
 The CI pipeline SHALL define explicit timeout limits to prevent runaway jobs.
@@ -41,10 +41,4 @@ The CI pipeline SHALL define explicit timeout limits to prevent runaway jobs.
 - **THEN** the job SHALL be cancelled with a timeout error message
 - **THEN** the overall workflow run SHALL be marked as failed
 
-### Requirement: Secret Validation
-The Chromatic workflow SHALL validate that required secrets are present before running the Chromatic action.
 
-#### Scenario: Missing token fails gracefully
-- **WHEN** the Chromatic workflow runs and `CHROMATIC_PROJECT_TOKEN` is not set
-- **THEN** the workflow SHALL fail with a clear error message: "CHROMATIC_PROJECT_TOKEN secret is not configured"
-- **THEN** the Chromatic action SHALL NOT execute

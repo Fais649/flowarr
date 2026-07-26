@@ -8,15 +8,15 @@ Three GitHub Actions workflows: `tests.yml`, `linter.yml`, `chromatic.yml`. Lint
 3. **Uses `npm i` instead of `npm ci`**: `npm i` respects lockfile but can modify it; `npm ci` is the correct deterministic install for CI.
 4. **Uses `npm run build` twice** (once for vite, once for Storybook) — Storybook build should be exclusive to Chromatic workflow.
 
-**Chromatic failure:**
-- `CHROMATIC_PROJECT_TOKEN` secret not set in repository. Action fails immediately with `Missing project token`.
+**Chromatic workflow:**
+- Uses `chromaui/action` requiring a `CHROMATIC_PROJECT_TOKEN` — user has no Chromatic account/token. Entire workflow is dead weight.
 
 ## Goals / Non-Goals
 
 **Goals:**
 - Tests workflow passes on `main` for all matrix entries
 - Linter workflow stays green
-- Chromatic workflow fails gracefully when token missing (not with cryptic error)
+- Remove Chromatic workflow (no Chromatic account/project)
 - CI pipeline spec updated to reflect current PHP version requirements
 
 **Non-Goals:**
@@ -37,8 +37,9 @@ Three GitHub Actions workflows: `tests.yml`, `linter.yml`, `chromatic.yml`. Lint
 3. **Switch `npm i` to `npm ci` in tests workflow**
    - Rationale: `npm ci` is faster, stricter, and the standard for CI environments. Prevents accidental lockfile mutations.
 
-4. **Chromatic: validate token before running action**
-   - Add a step checking `${{ secrets.CHROMATIC_PROJECT_TOKEN }}` non-empty before proceeding. Fail with a clear message rather than the opaque "Missing project token" error.
+4. **Remove Chromatic workflow entirely**
+   - Alternative: keep it and configure token
+   - Rationale: User has no Chromatic account. The workflow, deps, and npm script are all dead code. Removing them reduces CI surface and npm install size. If visual regression testing is needed later, Storybook can be re-added as a separate step.
 
 5. **Add explicit timeout bounds to long-running steps**
    - Set `timeout-minutes` on the job level to fail fast instead of waiting for the default 360-min timeout.
@@ -46,5 +47,4 @@ Three GitHub Actions workflows: `tests.yml`, `linter.yml`, `chromatic.yml`. Lint
 ## Risks / Trade-offs
 
 - **Dropping PHP 8.3**: Unblocks CI. If a future dependency forces 8.3 compatibility, the matrix can be re-added. Low risk since the project is early-stage.
-- **Removing storybook build from tests**: If Chromatic workflow breaks but tests pass, Storybook regressions go undetected. Mitigation: Chromatic is the canonical visual regression check.
-- **Secret not set for Chromatic**: Non-zero exit code blocks PR merge even with graceful message. Mitigation: The token should be configured in repo secrets once; this change documents the requirement.
+- **Removing storybook build from tests**: Storybook build still runs locally or in Chromatic workflows if re-added. The tests job doesn't need it.
