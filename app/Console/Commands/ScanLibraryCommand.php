@@ -19,23 +19,18 @@ use Symfony\Component\Finder\Finder;
 #[Description('Scans the media library and enqueues any files that need processing.')]
 class ScanLibraryCommand extends Command
 {
-    public function __construct(private MediaProbeService $probeService)
-    {
-        parent::__construct();
-    }
-
     /**
      * Execute the console command.
      */
-    public function handle(): void
+    public function handle(MediaProbeService $probeService): void
     {
         foreach (Library::dueForScan()->get() as $library) {
-            $this->processLibrary($library);
+            $this->processLibrary($library, $probeService);
         }
 
     }
 
-    public function processLibrary(Library $library): void
+    public function processLibrary(Library $library, MediaProbeService $probeService): void
     {
         $enabledJobs = $library->libraryJobs;
         if ($enabledJobs->isEmpty()) {
@@ -52,7 +47,7 @@ class ScanLibraryCommand extends Command
 
         foreach ($files as $file) {
             $path = $file->getRealPath();
-            $result = $this->probeService->probe($path);
+            $result = $probeService->probe($path);
             $this->dispatchForResult($enabledJobs, $result, $path);
         }
         $library->update(['last_scan' => now()]);

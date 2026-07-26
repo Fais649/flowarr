@@ -22,7 +22,6 @@ type DataTableProps<T> = {
     columns: Column<T>[];
     data: T[];
     sort?: string;
-    direction?: 'asc' | 'desc';
     onSort?: (key: string) => void;
     emptyMessage?: string;
 };
@@ -31,7 +30,6 @@ export function DataTable<T extends { id: number | string }>({
     columns,
     data,
     sort,
-    direction,
     onSort,
     emptyMessage = 'No records found.',
 }: DataTableProps<T>) {

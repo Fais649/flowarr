@@ -13,7 +13,7 @@ class JobWorkerLimitSeeder extends Seeder
      */
     public function run(): void
     {
-        JobWorkerLimit::factory()->create([
+        JobWorkerLimit::factory()->createMany([
             ['job_type' => LibraryJobId::TRANSCODE_MEDIA->value, 'max_concurrent' => 1],
             ['job_type' => LibraryJobId::CONVERT_SUBTITLE->value, 'max_concurrent' => 3],
             ['job_type' => LibraryJobId::EXTRACT_SUBTITLES->value, 'max_concurrent' => 2],

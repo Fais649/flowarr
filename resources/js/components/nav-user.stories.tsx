@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { NavUser } from './nav-user';
 import { Sidebar, SidebarProvider } from './ui/sidebar';
 

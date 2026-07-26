@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem } from '@/types';
 
 export default function CreateLibrary({
     library,
@@ -29,11 +28,6 @@ export default function CreateLibrary({
         }
     };
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Libraries', href: '/libraries' },
-        { title: library ? 'Edit Library' : 'Create Library', href: '#' },
-    ];
 
     return (
         <>

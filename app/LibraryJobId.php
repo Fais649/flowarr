@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Jobs\Contracts\DispatchableJob;
 use App\Jobs\ConvertSubtitleJob;
 use App\Jobs\ExtractSubtitlesJob;
 use App\Jobs\TranscodeMediaJob;
@@ -14,7 +15,7 @@ enum LibraryJobId: string
     case CONVERT_SUBTITLE = 'convert_sub';
 
     /**
-     * @return class-string<ShouldQueue>
+     * @return class-string<ShouldQueue&DispatchableJob>
      */
     public function getJobClass(): string
     {

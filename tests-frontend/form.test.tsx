@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('@inertiajs/react', () => ({
     Link: ({ href, children, ...props }: { href: string; children: React.ReactNode; [key: string]: unknown }) => (
@@ -18,14 +18,14 @@ vi.mock('@laravel/passkeys/react', () => ({
     usePasskeyVerify: () => ({ verify: vi.fn(), isLoading: false, error: null, isSupported: true }),
 }));
 
-import PasswordInput from '@/components/password-input';
-import InputError from '@/components/input-error';
 import AlertError from '@/components/alert-error';
 import DeleteUser from '@/components/delete-user';
+import InputError from '@/components/input-error';
+import ManagePasskeys from '@/components/manage-passkeys';
+import PasskeyItem from '@/components/passkey-item';
 import PasskeyRegistration from '@/components/passkey-register';
 import PasskeyVerify from '@/components/passkey-verify';
-import PasskeyItem from '@/components/passkey-item';
-import ManagePasskeys from '@/components/manage-passkeys';
+import PasswordInput from '@/components/password-input';
 
 describe('PasswordInput', () => {
     it('renders password input', () => {

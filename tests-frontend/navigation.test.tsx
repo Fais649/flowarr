@@ -1,15 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import Heading from '@/components/heading';
-import TextLink from '@/components/text-link';
-import { Breadcrumbs } from '@/components/breadcrumbs';
+import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('@/components/ui/sidebar', () => ({
     SidebarGroup: ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={className}>{children}</div>,
     SidebarGroupContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     SidebarGroupLabel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     SidebarMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-    SidebarMenuButton: ({ children, asChild, ...props }: { children: React.ReactNode; asChild?: boolean; [key: string]: unknown }) => <a {...props}>{children}</a>,
+    SidebarMenuButton: ({ children, ...props }: { children: React.ReactNode; asChild?: boolean; [key: string]: unknown }) => <a {...props}>{children}</a>,
     SidebarMenuItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     useSidebar: () => ({ state: 'expanded', open: true, setOpen: vi.fn(), openMobile: false, setOpenMobile: vi.fn(), isMobile: false, toggleSidebar: vi.fn() }),
     SidebarProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -21,14 +18,17 @@ vi.mock('@/components/ui/sidebar', () => ({
     SidebarMenuAction: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <button {...props}>{children}</button>,
 }));
 
-import { NavFooter } from '@/components/nav-footer';
-import { NavMain } from '@/components/nav-main';
-import { AppShell } from '@/components/app-shell';
-import { AppSidebarHeader } from '@/components/app-sidebar-header';
+import { AppHeader } from '@/components/app-header';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
-import { AppHeader } from '@/components/app-header';
+import { AppShell } from '@/components/app-shell';
+import { AppSidebarHeader } from '@/components/app-sidebar-header';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import Heading from '@/components/heading';
+import { NavFooter } from '@/components/nav-footer';
+import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
+import TextLink from '@/components/text-link';
 
 vi.mock('@/components/ui/sheet', () => ({
     Sheet: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -43,7 +43,7 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
     DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     DropdownMenuContent: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => <div {...props}>{children}</div>,
     DropdownMenuGroup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-    DropdownMenuItem: ({ children, asChild, ...props }: { children: React.ReactNode; asChild?: boolean; [key: string]: unknown }) => <div {...props}>{children}</div>,
+    DropdownMenuItem: ({ children, ...props }: { children: React.ReactNode; asChild?: boolean; [key: string]: unknown }) => <div {...props}>{children}</div>,
     DropdownMenuLabel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     DropdownMenuSeparator: () => <hr />,
 }));

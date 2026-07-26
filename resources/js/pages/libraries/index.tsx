@@ -1,11 +1,10 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { DataTable } from '@/components/data-table';
 import type { Column } from '@/components/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem } from '@/types';
 
 type Library = {
     id: number;
@@ -21,10 +20,6 @@ export default function LibrariesIndex({
 }: {
     libraries: Library[];
 }) {
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Libraries', href: '/libraries' },
-    ];
 
     const columns: Column<Library>[] = [
         {

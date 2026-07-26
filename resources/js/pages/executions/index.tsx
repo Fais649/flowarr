@@ -1,12 +1,11 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { ArrowLeft, RotateCcw, XCircle } from 'lucide-react';
+import { Head, router } from '@inertiajs/react';
+import { RotateCcw, XCircle } from 'lucide-react';
 import { DataTable } from '@/components/data-table';
 import type { Column } from '@/components/data-table';
 import { FilterBar } from '@/components/filter-bar';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem } from '@/types';
 
 type Execution = {
     id: number;
@@ -113,10 +112,6 @@ return;
         },
     ];
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Executions', href: '/executions' },
-    ];
 
     return (
         <>

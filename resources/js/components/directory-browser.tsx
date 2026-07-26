@@ -1,5 +1,5 @@
 import { ChevronRightIcon, FolderIcon, Loader2Icon } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -137,13 +137,6 @@ export default function DirectoryBrowser({
         }
     }, []);
 
-    useEffect(() => {
-        if (open) {
-            setSelectedPath(null);
-            fetchTree();
-        }
-    }, [open, fetchTree]);
-
     const handleSelect = () => {
         if (selectedPath) {
             onSelect(selectedPath);
@@ -155,8 +148,9 @@ export default function DirectoryBrowser({
         <Dialog
             open={open}
             onOpenChange={(val) => {
-                if (!val) {
+                if (val) {
                     setSelectedPath(null);
+                    fetchTree();
                 }
 
                 onOpenChange(val);

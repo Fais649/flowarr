@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { LayoutGrid, Telescope } from 'lucide-react';
 import { NavMain } from './nav-main';
 import { SidebarProvider, Sidebar } from './ui/sidebar';

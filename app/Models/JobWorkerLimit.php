@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class JobWorkerLimit extends Model
 {
+    /** @use HasFactory<JobWorkerLimit> */
     use HasFactory;
 
     protected $fillable = [

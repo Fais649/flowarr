@@ -1,7 +1,7 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Call to an undefined static method App\\Jobs\\DispatchableJob\:\:dispatch\(\)\.$#'
+			message: '#^Call to an undefined static method App\\Jobs\\Contracts\\DispatchableJob&Illuminate\\Contracts\\Queue\\ShouldQueue\:\:dispatch\(\)\.$#'
 			identifier: staticMethod.notFound
 			count: 1
 			path: app/Console/Commands/ScanLibraryCommand.php
@@ -109,18 +109,6 @@ parameters:
 			path: app/Jobs/ExtractSubtitlesJob.php
 
 		-
-			message: '#^Method App\\LibraryJobId\:\:getJobClass\(\) has invalid return type App\\Jobs\\DispatchableJob\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/LibraryJobId.php
-
-		-
-			message: '#^Method App\\LibraryJobId\:\:getJobClass\(\) should return class\-string\<App\\Jobs\\DispatchableJob\> but returns string\.$#'
-			identifier: return.type
-			count: 1
-			path: app/LibraryJobId.php
-
-		-
 			message: '#^Class App\\Models\\Execution uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
 			identifier: missingType.generics
 			count: 1
@@ -145,20 +133,20 @@ parameters:
 			path: app/Models/Execution.php
 
 		-
+			message: '#^Type App\\Models\\JobWorkerLimit in generic type Illuminate\\Database\\Eloquent\\Factories\\HasFactory\<App\\Models\\JobWorkerLimit\> in PHPDoc tag @use is not subtype of template type TFactory of Illuminate\\Database\\Eloquent\\Factories\\Factory of trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory\.$#'
+			identifier: generics.notSubtype
+			count: 1
+			path: app/Models/JobWorkerLimit.php
+
+		-
+			message: '#^Call to an undefined method App\\Jobs\\Contracts\\DispatchableJob&Illuminate\\Contracts\\Queue\\ShouldQueue\:\:setExecutionId\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/ScannerService.php
+
+		-
 			message: '#^Call to an undefined method App\\Services\\MediaProbeResult\:\:hasEmbeddedSubtitles\(\)\.$#'
 			identifier: method.notFound
-			count: 1
-			path: app/Services/ScannerService.php
-
-		-
-			message: '#^Call to an undefined method App\\Services\\MediaProbeResult\:\:isTargetEncoding\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Services/ScannerService.php
-
-		-
-			message: '#^Call to method setExecutionId\(\) on an unknown class App\\Jobs\\DispatchableJob\.$#'
-			identifier: class.notFound
 			count: 1
 			path: app/Services/ScannerService.php
 
@@ -173,6 +161,12 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Settings.php
+
+		-
+			message: '#^Trait App\\Traits\\HasJobSlot is used zero times and is not analysed\.$#'
+			identifier: trait.unused
+			count: 1
+			path: app/Traits/HasJobSlot.php
 
 		-
 			message: '#^Array has 2 duplicate keys with value ''iku'' \(''iku'', ''iku''\)\.$#'

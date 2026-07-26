@@ -4,7 +4,6 @@ import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem } from '@/types';
 
 type Execution = {
     id: number;
@@ -40,11 +39,6 @@ return;
         router.post(`/executions/${execution.id}/cancel`);
     };
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Executions', href: '/executions' },
-        { title: `#${execution.id}`, href: '#' },
-    ];
 
     return (
         <>

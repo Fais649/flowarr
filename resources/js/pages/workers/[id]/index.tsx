@@ -3,7 +3,6 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem } from '@/types';
 
 type Worker = {
     id: number;
@@ -13,11 +12,6 @@ type Worker = {
 };
 
 export default function WorkerDetail({ worker }: { worker: Worker }) {
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Workers', href: '/workers' },
-        { title: worker.name, href: '#' },
-    ];
 
     return (
         <>

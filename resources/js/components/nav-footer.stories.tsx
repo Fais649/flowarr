@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { FolderGit2 } from 'lucide-react';
 import { NavFooter } from './nav-footer';
 import { SidebarProvider, Sidebar } from './ui/sidebar';

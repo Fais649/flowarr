@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem } from '@/types';
 
 type Library = {
     id: number;
@@ -93,11 +92,6 @@ return;
         },
     ];
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Libraries', href: '/libraries' },
-        { title: library.base_path.split('/').pop() ?? 'Library', href: '#' },
-    ];
 
     return (
         <>

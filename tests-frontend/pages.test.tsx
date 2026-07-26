@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('@inertiajs/react', () => ({
     Head: () => null,
@@ -26,14 +26,14 @@ vi.mock('@inertiajs/react', () => ({
     ),
 }));
 
+import ForgotPassword from '@/pages/auth/forgot-password';
 import Login from '@/pages/auth/login';
 import Register from '@/pages/auth/register';
-import ForgotPassword from '@/pages/auth/forgot-password';
 import ResetPassword from '@/pages/auth/reset-password';
+import Dashboard from '@/pages/dashboard';
+import Appearance from '@/pages/settings/appearance';
 import Profile from '@/pages/settings/profile';
 import Security from '@/pages/settings/security';
-import Appearance from '@/pages/settings/appearance';
-import Dashboard from '@/pages/dashboard';
 import Welcome from '@/pages/welcome';
 
 describe('Login', () => {
