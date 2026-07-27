@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Continuous Integration
 The CI pipeline SHALL run on push and pull request events to the default branch.

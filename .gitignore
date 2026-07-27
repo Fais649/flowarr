@@ -35,3 +35,5 @@ storybook-static
 /tests-browser/fixtures/auth-state.json
 # Local Pi runtime state
 .atl/
+rr
+.rr.yaml

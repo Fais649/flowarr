@@ -11,8 +11,14 @@ class RedirectIfNoUsers
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->isMethod('GET') && ! User::exists() && ! $request->is('register*', 'login*', 'forgot-password*', 'reset-password*', '.well-known/*')) {
-            return redirect()->to('/register');
+        if ($request->isMethod('GET') && ! $request->is('register*', 'login*', 'forgot-password*', 'reset-password*', '.well-known/*', 'health', 'up')) {
+            try {
+                if (! User::exists()) {
+                    return redirect()->to('/register');
+                }
+            } catch (\Throwable) {
+                // DB unavailable — allow request through
+            }
         }
 
         return $next($request);

@@ -1,0 +1,68 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Dependencies (rebuilt in Docker)
+node_modules
+vendor
+
+# CI & Tooling
+.github
+.storybook
+stubs
+phpunit.xml
+phpstan-baseline.php
+phpstan.neon
+*.dist
+.editorconfig
+eslint.config.js
+prettier.config.*
+pnpm-lock.yaml
+pnpm-workspace.yaml
+
+# Tests (not needed in production)
+tests
+tests-frontend
+tests-browser
+
+# Development environment
+.env
+.env.local
+.env.production
+# Keep .env.example.docker (needed at runtime for first boot)
+!.env.example.docker
+docker/
+openspec/
+rr/
+.docker
+
+# Documentation (not needed in runtime)
+*.md
+!README.md
+LICENSE
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build artifacts
+public/hot
+public/build
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+!storage/framework/.gitignore
+!storage/logs/.gitignore
+
+# SASS/CSS source maps (optional)
+public/build/assets/*.map
+
+# OS files
+.DS_Store
+Thumbs.db
