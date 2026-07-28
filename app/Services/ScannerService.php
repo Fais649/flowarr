@@ -7,6 +7,7 @@ use App\LibraryJobId;
 use App\Models\Execution;
 use App\Models\Library;
 use App\Models\LibraryJob;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class ScannerService
@@ -25,22 +26,24 @@ class ScannerService
             return;
         }
 
-        // Determine enabled jobs from workers (if any) or fall back to libraryJobs
-        $enabledJobs = $library->libraryJobs;
-        if ($enabledJobs->isEmpty() && $library->workers()->exists()) {
-            // Workers are assigned — create LibraryJob records for each worker's job type
-            $workers = $library->workers;
-            foreach ($workers as $worker) {
-                $jobType = $worker->job_type;
-                if ($jobType) {
-                    $enabledJobs->push(
-                        $library->libraryJobs()->firstOrCreate([
-                            'job_id' => $jobType,
-                        ])
-                    );
-                }
+        /** @var Collection<int, LibraryJob> */
+        $enabledJobs = new Collection;
+        if (! $library->workers()->exists()) {
+            return;
+        }
+
+        $workers = $library->workers;
+        foreach ($workers as $worker) {
+            $jobType = $worker->job_type;
+            if ($jobType) {
+                $enabledJobs->push(
+                    $library->libraryJobs()->firstOrCreate([
+                        'job_id' => $jobType,
+                    ])
+                );
             }
         }
+
         $files = $this->collectMediaFiles($basePath);
 
         foreach ($files as $filePath) {
@@ -168,7 +171,7 @@ class ScannerService
             return false;
         }
 
-        return $result->hasEmbeddedSubtitles();
+        return $result->hasEmbeddedSubs();
     }
 
     private function needsSubtitleConversion(string $filePath): bool
@@ -196,7 +199,7 @@ class ScannerService
     {
         return Execution::where('file_path', $filePath)
             ->where('library_job_id', $libraryJobId)
-            ->whereIn('status', [ExecutionStatus::QUEUED, ExecutionStatus::PROCESSING])
+            ->whereNotIn('status', [ExecutionStatus::FAILED])
             ->exists();
     }
 

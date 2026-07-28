@@ -6,10 +6,7 @@ use FFMpeg\FFProbe;
 
 class MediaProbeService
 {
-    // NOTE: 'ts' intentionally omitted — conflicts with TypeScript (.d.ts -> ext=ts).
-    // If you need MPEG Transport Stream support, add 'ts' back and ensure
-    // your library paths exclude node_modules / .git / vendor.
-    public const VIDEO_EXTENSIONS = ['mkv', 'mp4', 'avi', 'mov', 'm4v', 'wmv', 'mts'];
+    public const VIDEO_EXTENSIONS = ['mkv', 'mp4', 'avi', 'mov', 'm4v', 'wmv', 'mts', 'flv'];
 
     public const SUBTITLE_EXTENSIONS = ['ass', 'ssa', 'sub', 'idx', 'sup', 'pgs'];
 

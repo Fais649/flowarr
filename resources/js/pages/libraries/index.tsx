@@ -5,15 +5,8 @@ import type { Column } from '@/components/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
-
-type Library = {
-    id: number;
-    base_path: string;
-    status: string;
-    scan_interval: number;
-    last_scan: string | null;
-    library_jobs: { id: number; job_id: string }[];
-};
+import { toDateString } from '@/lib/utils';
+import { type Library } from '@/types/models'
 
 export default function LibrariesIndex({
     libraries,
@@ -47,12 +40,12 @@ export default function LibrariesIndex({
         {
             key: 'last_scan',
             label: 'Last Scan',
-            render: (lib) => lib.last_scan ?? 'Never',
+            render: (lib) => toDateString(lib.last_scan ?? '')
         },
         {
             key: 'jobs',
-            label: 'Enabled Jobs',
-            render: (lib) => lib.library_jobs.length.toString(),
+            label: 'Enabled Workers',
+            render: (lib) => lib.workers?.length.toString() ?? '0',
         },
         {
             key: 'actions',

@@ -32,7 +32,7 @@ class TranscodeMediaJob implements DispatchableJob, ShouldQueue
         $this->markExecutionAsProcessing();
 
         $inputPath = $this->filePath;
-        $outputPath = preg_replace('/(\.[^.]+)$/', 'HEVC$1', $inputPath);
+        $outputPath = preg_replace('/(\.[^.]+)$/', '_HEVC$1', $inputPath);
 
         // Check if we should use software encoding for compatibility (e.g. in CI or if NVENC is unavailable)
         // We can use a config value to toggle this.
@@ -45,16 +45,23 @@ class TranscodeMediaJob implements DispatchableJob, ShouldQueue
             default => 'medium',
         };
 
-        $command = [
+        // Define rate control parameters to match or optimize quality without inflating size
+        $rateControlFlags = match ($videoCodec) {
+            'hevc_nvenc' => ['-rc', 'constqp', '-qp', '28'], // Or use Constant Quality: ['-rc', 'vbr', '-cq', '28']
+            default => ['-crf', '28'],
+        };
+
+        $command = array_merge([
             config('services.ffmpeg.bin', 'ffmpeg'),
             '-y',
             '-i', $inputPath,
             '-vf', $this->resolveVideoFilter($inputPath),
             '-c:v', $videoCodec,
             '-preset', $preset,
+        ], $rateControlFlags, [
             '-c:a', 'copy',
             $outputPath,
-        ];
+        ]);
 
         $process = $this->process ?? new Process($command);
         $process->setTimeout(null);

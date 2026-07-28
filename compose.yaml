@@ -29,7 +29,7 @@ services:
                           capabilities: [gpu, video, utility]
         volumes:
             - '.:/var/www/html'
-            - '~/punk.sys/proj/test-data:/media'
+            - './test-media:/media'
         networks:
             - sail
         depends_on:

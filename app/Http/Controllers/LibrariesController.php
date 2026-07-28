@@ -20,7 +20,7 @@ class LibrariesController extends Controller
 {
     public function index(): Response
     {
-        $libraries = Library::with('libraryJobs')->orderBy('created_at', 'desc')->get();
+        $libraries = Library::with('libraryJobs', 'workers')->orderBy('created_at', 'desc')->get();
 
         return Inertia::render('libraries/index', [
             'libraries' => $libraries,

@@ -6,6 +6,7 @@ import { DataTable } from '@/components/data-table';
 import type { Column } from '@/components/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import { type Worker, type Library, type Execution } from '@/types/models'
 import {
     Card,
     CardContent,
@@ -15,32 +16,7 @@ import {
 } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import AppLayout from '@/layouts/app-layout';
-
-type Worker = {
-    id: number;
-    name: string;
-    job_type: string | null;
-    pivot: { worker_id: number; library_id: number };
-};
-
-type Library = {
-    id: number;
-    base_path: string;
-    status: string;
-    scan_interval: number;
-    last_scan: string | null;
-    library_jobs: { id: number; job_id: string }[];
-    workers: Worker[];
-};
-
-type Execution = {
-    id: number;
-    file_path: string;
-    status: string;
-    library_job: { id: number; job_id: string };
-    created_at: string;
-};
-
+import { toDateString } from '@/lib/utils';
 
 const JOB_TYPE_LABELS: Record<string, string> = {
     transcode_media: 'Transcode Media',
@@ -160,7 +136,7 @@ export default function LibraryDetail({
                                     Last Scan
                                 </span>
                                 <p className="font-medium">
-                                    {library.last_scan ?? 'Never'}
+                                    {toDateString(library.last_scan ?? '')}
                                 </p>
                             </div>
                             <div>
@@ -206,8 +182,8 @@ export default function LibraryDetail({
                                             <span className="text-xs text-muted-foreground">
                                                 {worker.job_type
                                                     ? JOB_TYPE_LABELS[
-                                                          worker.job_type
-                                                      ] ?? worker.job_type
+                                                    worker.job_type
+                                                    ] ?? worker.job_type
                                                     : '-'}
                                             </span>
                                         </div>

@@ -191,6 +191,7 @@ cd flowarr
 cp .env.example .env
 ./vendor/bin/sail up -d
 ./vendor/bin/sail artisan key:generate
+./vendor/bin/sail composer setup
 ./vendor/bin/sail artisan migrate
 ./vendor/bin/sail artisan db:seed
 ```
@@ -198,7 +199,7 @@ cp .env.example .env
 The app will be available at `http://localhost`.
 
 ```bash
-./vendor/bin/sail bun run dev    # Vite dev server with hot reload
+./vendor/bin/sail composer run dev    # Starts application at localhost:80
 ./vendor/bin/sail artisan test   # Run tests
 ```
 
