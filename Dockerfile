@@ -88,13 +88,14 @@ COPY --from=assets /app/public/build ./public/build
 COPY docker-production/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker-production/php.ini /usr/local/etc/php/conf.d/production.ini
 COPY docker-production/docker-entrypoint.sh /usr/local/bin/
+COPY docker-production/worker-supervisor.sh /usr/local/bin/
 
 # Create required Laravel directories
 RUN mkdir -p bootstrap/cache storage/framework/cache/data \
         storage/framework/sessions storage/framework/views \
         storage/logs public/build && \
     chown -R www-data:www-data storage bootstrap/cache && \
-    chmod +x /usr/local/bin/docker-entrypoint.sh
+    chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/worker-supervisor.sh
 
 # Pre-warm caches (config cache will be rebuilt at runtime after .env substitution)
 RUN cp .env.example.docker .env && \
