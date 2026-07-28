@@ -49,6 +49,10 @@ services:
       REDIS_PORT: "6379"
       LOG_LEVEL: warning
       RUN_MIGRATIONS: "true"
+      QUEUE_CONNECTION: database
+      SESSION_DRIVER: database
+      CACHE_STORE: redis
+      APP_NAME: Flowarr
     volumes:
       - ${MEDIA_PATH:-./media}:/media
       - flowarr-storage:/var/www/html/storage
