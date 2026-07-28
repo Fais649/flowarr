@@ -1,16 +1,8 @@
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
 import { RotateCcw, Play, Square, Pause, Trash2 } from 'lucide-react';
-import { DataTable } from '@/components/data-table';
-import type { Column } from '@/components/data-table';
-import { FilterBar } from '@/components/filter-bar';
-import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import AppLayout from '@/layouts/app-layout';
+import { useState } from 'react';
 import {
     retry,
-    cancel,
     start,
     pause,
     resume,
@@ -22,6 +14,13 @@ import {
     batchStop,
     batchDelete,
 } from '@/actions/App/Http/Controllers/ExecutionsController';
+import { DataTable } from '@/components/data-table';
+import type { Column } from '@/components/data-table';
+import { FilterBar } from '@/components/filter-bar';
+import { StatusBadge } from '@/components/status-badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import AppLayout from '@/layouts/app-layout';
 
 type Execution = {
     id: number;
@@ -63,11 +62,13 @@ export default function ExecutionsIndex({
 
     const toggleSelect = (id: number) => {
         const next = new Set(selectedIds);
+
         if (next.has(id)) {
             next.delete(id);
         } else {
             next.add(id);
         }
+
         setSelectedIds(next);
     };
 
@@ -86,8 +87,14 @@ export default function ExecutionsIndex({
         url: string,
         confirmMsg?: string,
     ) => {
-        if (selectedIds.size === 0) return;
-        if (confirmMsg && !confirm(confirmMsg)) return;
+        if (selectedIds.size === 0) {
+return;
+}
+
+        if (confirmMsg && !confirm(confirmMsg)) {
+return;
+}
+
         router.post(
             url,
             { ids: Array.from(selectedIds) },
@@ -100,24 +107,29 @@ export default function ExecutionsIndex({
         url: string,
         confirmMsg?: string,
     ) => {
-        if (confirmMsg && !confirm(confirmMsg)) return;
+        if (confirmMsg && !confirm(confirmMsg)) {
+return;
+}
+
         router.post(url, {}, { preserveScroll: true });
     };
 
     const handleRetry = (execution: Execution) => {
-        if (!confirm('Retry this execution?')) return;
+        if (!confirm('Retry this execution?')) {
+return;
+}
+
         router.post(retry.url({ execution: execution.id }), {}, { preserveScroll: true });
     };
 
     
 
-    const handleCancel = (execution: Execution) => {
-        if (!confirm(cancelConfirm(execution.status))) return;
-        router.post(cancel.url({ execution: execution.id }), {}, { preserveScroll: true });
-    };
 
     const handleDelete = (execution: Execution) => {
-        if (!confirm('Delete this execution record?')) return;
+        if (!confirm('Delete this execution record?')) {
+return;
+}
+
         router.delete(destroy.url({ execution: execution.id }), { preserveScroll: true });
     };
 

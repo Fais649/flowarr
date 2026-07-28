@@ -1,6 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { ArrowLeft, Play, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { toggleWorker } from '@/actions/App/Http/Controllers/LibrariesController';
 import { DataTable } from '@/components/data-table';
 import type { Column } from '@/components/data-table';
 import { StatusBadge } from '@/components/status-badge';
@@ -14,7 +15,6 @@ import {
 } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import AppLayout from '@/layouts/app-layout';
-import { toggleWorker } from '@/actions/App/Http/Controllers/LibrariesController';
 
 type Worker = {
     id: number;
@@ -41,10 +41,6 @@ type Execution = {
     created_at: string;
 };
 
-type JobType = {
-    value: string;
-    label: string;
-};
 
 const JOB_TYPE_LABELS: Record<string, string> = {
     transcode_media: 'Transcode Media',

@@ -1,33 +1,5 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { DataTable } from '@/components/data-table';
-import type { Column } from '@/components/data-table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import AppLayout from '@/layouts/app-layout';
 import {
     store as createWorker,
     startAll,
@@ -40,6 +12,34 @@ import {
     stop as stopWorker,
     destroy as deleteWorker,
 } from '@/actions/App/Http/Controllers/WorkersController';
+import { DataTable } from '@/components/data-table';
+import type { Column } from '@/components/data-table';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import AppLayout from '@/layouts/app-layout';
 
 type Worker = {
     id: number;
@@ -64,7 +64,9 @@ export default function WorkersIndex({ workers }: { workers: Worker[] }) {
     const [submitting, setSubmitting] = useState(false);
 
     const handleCreate = () => {
-        if (!newName.trim() || !newJobType) return;
+        if (!newName.trim() || !newJobType) {
+return;
+}
 
         setSubmitting(true);
         router.post(
@@ -88,7 +90,10 @@ export default function WorkersIndex({ workers }: { workers: Worker[] }) {
     };
 
     const handleDelete = (worker: Worker) => {
-        if (!confirm(`Delete worker "${worker.name}"?`)) return;
+        if (!confirm(`Delete worker "${worker.name}"?`)) {
+return;
+}
+
         router.delete(deleteWorker.url({ worker: worker.id }), {
             preserveScroll: true,
         });
