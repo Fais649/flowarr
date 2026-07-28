@@ -25,7 +25,22 @@ class ScannerService
             return;
         }
 
+        // Determine enabled jobs from workers (if any) or fall back to libraryJobs
         $enabledJobs = $library->libraryJobs;
+        if ($enabledJobs->isEmpty() && $library->workers()->exists()) {
+            // Workers are assigned — create LibraryJob records for each worker's job type
+            $workers = $library->workers;
+            foreach ($workers as $worker) {
+                $jobType = $worker->job_type;
+                if ($jobType) {
+                    $enabledJobs->push(
+                        $library->libraryJobs()->firstOrCreate([
+                            'job_id' => $jobType,
+                        ])
+                    );
+                }
+            }
+        }
         $files = $this->collectMediaFiles($basePath);
 
         foreach ($files as $filePath) {
