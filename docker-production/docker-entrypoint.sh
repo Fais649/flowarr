@@ -17,12 +17,10 @@ if [ -z "${APP_KEY:-}" ] || [ "${APP_KEY}" = "base64:" ]; then
 else
     RAW_KEY="${APP_KEY}"
     unset APP_KEY
-    # Build the prefixed key
     case "$RAW_KEY" in
         base64:*) PREFIXED_KEY="$RAW_KEY" ;;
         *) PREFIXED_KEY="base64:${RAW_KEY}" ;;
     esac
-    # Replace APP_KEY line in .env (remove any existing, add new)
     sed -i '/^APP_KEY=/d' .env
     echo "APP_KEY=${PREFIXED_KEY}" >> .env
 fi
@@ -46,11 +44,8 @@ php artisan event:cache
 php artisan view:cache
 
 echo "Starting PHP-FPM..."
-
-# Start PHP-FPM in background
 php-fpm -D
 
-# Verify PHP-FPM started (wait for PID file)
 for i in $(seq 1 10); do
     if [ -f /usr/local/var/run/php-fpm.pid ] || pgrep -f 'php-fpm.*master' > /dev/null 2>&1; then
         break
@@ -63,10 +58,23 @@ if ! pgrep -f 'php-fpm.*master' > /dev/null 2>&1 && [ ! -f /usr/local/var/run/ph
     exit 1
 fi
 
+# Start queue worker in background (auto-restarts on crash)
+echo "Starting queue worker..."
+QUEUE_PID=""
+start_queue_worker() {
+    while true; do
+        php artisan queue:work --queue=transcode,subtitle --sleep=3 --tries=3 --max-time=3600
+        echo "Queue worker exited, restarting in 2s..."
+        sleep 2
+    done
+}
+start_queue_worker &
+QUEUE_PID=$!
+
 echo "Starting nginx..."
 
 # Trap SIGTERM and SIGINT for graceful shutdown
-trap 'echo "Shutting down..."; nginx -s quit; kill $(pgrep -f "php-fpm" | grep -v "^$" | tr "\n" " ") 2>/dev/null; exit 0' SIGTERM SIGINT
+trap 'echo "Shutting down..."; nginx -s quit; kill $QUEUE_PID 2>/dev/null; kill $(pgrep -f "php-fpm" | grep -v "^$" | tr "\n" " ") 2>/dev/null; exit 0' SIGTERM SIGINT
 
 # Start nginx in foreground
 nginx -g "daemon off;"
