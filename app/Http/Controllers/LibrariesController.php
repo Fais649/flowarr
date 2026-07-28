@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreLibraryRequest;
 use App\Http\Requests\UpdateLibraryRequest;
+use App\Jobs\ScanLibraryJob;
 use App\LibraryJobId;
 use App\LibraryStatus;
 use App\Models\Execution;
 use App\Models\Library;
 use App\Models\LibraryJob;
 use App\Models\Worker;
-use App\Services\ScannerService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -40,23 +40,15 @@ class LibrariesController extends Controller
         return Inertia::render('libraries/create');
     }
 
-    public function store(StoreLibraryRequest $request, ScannerService $scanner): RedirectResponse
+    public function store(StoreLibraryRequest $request): RedirectResponse
     {
         $library = Library::create([
             'base_path' => $request->base_path,
             'scan_interval' => $request->scan_interval,
-            'status' => LibraryStatus::SCANNING,
+            'status' => LibraryStatus::PENDING_SCAN,
         ]);
 
-        try {
-            $scanner->scan($library);
-            $library->update([
-                'status' => LibraryStatus::PENDING,
-                'last_scan' => now(),
-            ]);
-        } catch (\Throwable $e) {
-            $library->update(['status' => LibraryStatus::PENDING]);
-        }
+        dispatch(new ScanLibraryJob($library->id));
 
         return redirect()->route('libraries.show', $library);
     }
@@ -111,19 +103,10 @@ class LibrariesController extends Controller
         return redirect()->route('libraries.index');
     }
 
-    public function triggerScan(Library $library, ScannerService $scanner): RedirectResponse
+    public function triggerScan(Library $library): RedirectResponse
     {
-        $library->update(['status' => LibraryStatus::SCANNING]);
-
-        try {
-            $scanner->scan($library);
-            $library->update([
-                'status' => LibraryStatus::PENDING,
-                'last_scan' => now(),
-            ]);
-        } catch (\Throwable $e) {
-            $library->update(['status' => LibraryStatus::PENDING]);
-        }
+        dispatch(new ScanLibraryJob($library->id));
+        $library->update(['status' => LibraryStatus::PENDING_SCAN]);
 
         return redirect()->route('libraries.show', $library);
     }
