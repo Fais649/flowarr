@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\ExecutionStatus;
 use App\Http\Requests\StoreWorkerRequest;
+use App\Http\Requests\UpdateWorkerRequest;
 use App\Models\Execution;
 use App\Models\LibraryJob;
 use App\Models\Worker;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -37,14 +37,9 @@ class WorkersController extends Controller
         return redirect()->route('workers.index');
     }
 
-    public function update(Request $request, Worker $worker): RedirectResponse
+    public function update(UpdateWorkerRequest $request, Worker $worker): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'concurrency' => ['sometimes', 'integer', 'min:1', 'max:99'],
-        ]);
-
-        $worker->update($validated);
+        $worker->update($request->validated());
 
         return redirect()->back();
     }

@@ -15,6 +15,7 @@ import {
 import { DataTable } from '@/components/data-table';
 import type { Column } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
+import { type Worker, JobTypeLabels } from '@/types/models';
 import {
     Card,
     CardContent,
@@ -40,33 +41,21 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
+import { Checkbox } from '@/components/ui/checkbox';
 
-type Worker = {
-    id: number;
-    name: string;
-    job_type: string | null;
-    concurrency: number;
-    created_at: string;
-    updated_at: string;
-};
-
-const JOB_TYPE_LABELS: Record<string, string> = {
-    transcode_media: 'Transcode Media',
-    extract_subs: 'Extract Subtitles',
-    convert_sub: 'Convert Subtitles',
-};
 
 export default function WorkersIndex({ workers }: { workers: Worker[] }) {
     const [addOpen, setAddOpen] = useState(false);
     const [newName, setNewName] = useState('');
     const [newJobType, setNewJobType] = useState('transcode_media');
     const [newConcurrency, setNewConcurrency] = useState(1);
+    const [newReplaceOriginal, setNewReplaceOriginal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
     const handleCreate = () => {
         if (!newName.trim() || !newJobType) {
-return;
-}
+            return;
+        }
 
         setSubmitting(true);
         router.post(
@@ -75,6 +64,7 @@ return;
                 name: newName,
                 job_type: newJobType,
                 concurrency: newConcurrency,
+                replace_original: newReplaceOriginal
             },
             {
                 preserveScroll: true,
@@ -84,6 +74,7 @@ return;
                     setNewName('');
                     setNewJobType('transcode_media');
                     setNewConcurrency(1);
+                    setNewReplaceOriginal(false);
                 },
             },
         );
@@ -91,8 +82,8 @@ return;
 
     const handleDelete = (worker: Worker) => {
         if (!confirm(`Delete worker "${worker.name}"?`)) {
-return;
-}
+            return;
+        }
 
         router.delete(deleteWorker.url({ worker: worker.id }), {
             preserveScroll: true,
@@ -119,7 +110,7 @@ return;
             key: 'job_type',
             label: 'Job Type',
             render: (w) =>
-                w.job_type ? JOB_TYPE_LABELS[w.job_type] ?? w.job_type : '-',
+                w.job_type ? JobTypeLabels[w.job_type] ?? w.job_type : '-',
         },
         {
             key: 'concurrency',
@@ -337,6 +328,15 @@ return;
                             </Select>
                         </div>
                         <div className="space-y-2">
+                            <Checkbox
+                                className="px-2"
+                                id="replace_original"
+                                checked={newReplaceOriginal}
+                                onCheckedChange={(checked) => setNewReplaceOriginal(checked === true)}
+                            />
+                            <Label htmlFor="replace_original">Replace Original Files</Label>
+                        </div>
+                        <div className="space-y-2">
                             <Label htmlFor="concurrency">Concurrency</Label>
                             <Input
                                 id="concurrency"
@@ -365,7 +365,7 @@ return;
                         </Button>
                     </DialogFooter>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
         </>
     );
 }

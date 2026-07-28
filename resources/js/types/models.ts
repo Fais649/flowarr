@@ -3,7 +3,12 @@ export type Worker = {
     name: string;
     job_type: string | null;
     pivot: { worker_id: number; library_id: number };
+    concurrency: number;
+    created_at: string;
+    updated_at: string;
+    replace_original: boolean;
 };
+
 
 export type Library = {
     id: number;
@@ -23,3 +28,8 @@ export type Execution = {
     created_at: string;
 };
 
+export const JobTypeLabels: Record<string, string> = {
+    transcode_media: 'Transcode Media',
+    extract_subs: 'Extract Subtitles',
+    convert_sub: 'Convert Subtitles',
+};

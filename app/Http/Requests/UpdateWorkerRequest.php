@@ -2,10 +2,9 @@
 
 namespace App\Http\Requests;
 
-use App\LibraryJobId;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreWorkerRequest extends FormRequest
+class UpdateWorkerRequest extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -16,8 +15,7 @@ class StoreWorkerRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'string', 'max:255'],
-            'job_type' => ['required', 'string', 'in:'.implode(',', array_map(fn (LibraryJobId $id) => $id->value, LibraryJobId::cases()))],
-            'concurrency' => ['required', 'integer', 'min:1', 'max:99'],
+            'concurrency' => ['sometimes', 'integer', 'min:1', 'max:99'],
             'replace_original' => ['required', 'boolean'],
         ];
     }

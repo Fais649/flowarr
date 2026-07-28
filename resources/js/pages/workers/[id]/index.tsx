@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { type Worker, JOB_TYPE_LABELS } from '@/types/models';
 import {
     Card,
     CardContent,
@@ -19,20 +20,6 @@ import {
     destroy,
 } from '@/actions/App/Http/Controllers/WorkersController';
 
-type Worker = {
-    id: number;
-    name: string;
-    job_type: string | null;
-    concurrency: number;
-    created_at: string;
-    updated_at: string;
-};
-
-const JOB_TYPE_LABELS: Record<string, string> = {
-    transcode_media: 'Transcode Media',
-    extract_subs: 'Extract Subtitles',
-    convert_sub: 'Convert Subtitles',
-};
 
 export default function WorkerDetail({ worker }: { worker: Worker }) {
     const handleAction = (
@@ -149,7 +136,7 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                                 <p className="font-medium">
                                     {worker.job_type
                                         ? JOB_TYPE_LABELS[worker.job_type] ??
-                                          worker.job_type
+                                        worker.job_type
                                         : '-'}
                                 </p>
                             </div>

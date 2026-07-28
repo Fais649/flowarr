@@ -6,7 +6,7 @@ import { DataTable } from '@/components/data-table';
 import type { Column } from '@/components/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { type Worker, type Library, type Execution } from '@/types/models'
+import { type Worker, type Library, type Execution, JobTypeLabels } from '@/types/models'
 import {
     Card,
     CardContent,
@@ -17,12 +17,6 @@ import {
 import { Switch } from '@/components/ui/switch';
 import AppLayout from '@/layouts/app-layout';
 import { toDateString } from '@/lib/utils';
-
-const JOB_TYPE_LABELS: Record<string, string> = {
-    transcode_media: 'Transcode Media',
-    extract_subs: 'Extract Subtitles',
-    convert_sub: 'Convert Subtitles',
-};
 
 export default function LibraryDetail({
     library,
@@ -181,7 +175,7 @@ export default function LibraryDetail({
                                             </span>
                                             <span className="text-xs text-muted-foreground">
                                                 {worker.job_type
-                                                    ? JOB_TYPE_LABELS[
+                                                    ? JobTypeLabels[
                                                     worker.job_type
                                                     ] ?? worker.job_type
                                                     : '-'}
