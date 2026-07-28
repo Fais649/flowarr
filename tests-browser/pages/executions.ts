@@ -11,4 +11,8 @@ export class ExecutionsIndexPage {
     async expectVisible() {
         await expect(this.page.locator('body')).toBeAttached();
     }
+
+    async expectFilterBar() {
+        await expect(this.page.getByLabel(/status/i)).toBeVisible();
+    }
 }

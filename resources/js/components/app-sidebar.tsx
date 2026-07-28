@@ -51,8 +51,8 @@ const managementNavItems: NavItem[] = [
 
 const footerNavItems: NavItem[] = [
     {
-        title: 'Configuration',
-        href: '/config/workers',
+        title: 'Scan Settings',
+        href: '/config/scan',
         icon: Settings2,
     },
     {

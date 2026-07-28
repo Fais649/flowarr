@@ -1,4 +1,4 @@
-import { ChevronRightIcon, FolderIcon, Loader2Icon } from 'lucide-react';
+import { AlertCircle, ChevronRightIcon, FolderIcon, Loader2Icon } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,7 +12,7 @@ import {
 type TreeNode = {
     name: string;
     path: string;
-    children: TreeNode[];
+    children?: TreeNode[];
 };
 
 type Props = {
@@ -24,14 +24,14 @@ type Props = {
 function DirectoryNode({
     name,
     path,
-    children,
+    children = [],
     depth,
     selectedPath,
     onSelectPath,
 }: {
     name: string;
     path: string;
-    children: TreeNode[];
+    children?: TreeNode[];
     depth: number;
     selectedPath: string | null;
     onSelectPath: (path: string) => void;
@@ -102,11 +102,13 @@ export default function DirectoryBrowser({
 }: Props) {
     const [tree, setTree] = useState<TreeNode[] | null>(null);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
     const fetchTree = useCallback(async () => {
         setLoading(true);
         setTree(null);
+        setError(null);
 
         try {
             const token =
@@ -125,12 +127,29 @@ export default function DirectoryBrowser({
             );
 
             if (!response.ok) {
-                throw new Error('Failed to fetch');
+                if (response.status === 401) {
+                    throw new Error(
+                        'Session expired. Please refresh the page and try again.',
+                    );
+                }
+                if (response.status === 404) {
+                    throw new Error(
+                        'Directory API not found. Try refreshing the page.',
+                    );
+                }
+                throw new Error(
+                    `Server error (${response.status}). Check server logs.`,
+                );
             }
 
             const data = await response.json();
             setTree(data.directories);
-        } catch {
+        } catch (e) {
+            setError(
+                e instanceof Error
+                    ? e.message
+                    : 'Could not load directories. Check the server status.',
+            );
             setTree([]);
         } finally {
             setLoading(false);
@@ -144,12 +163,17 @@ export default function DirectoryBrowser({
         }
     };
 
+    const handleRetry = () => {
+        fetchTree();
+    };
+
     return (
         <Dialog
             open={open}
             onOpenChange={(val) => {
                 if (val) {
                     setSelectedPath(null);
+                    setError(null);
                     fetchTree();
                 }
 
@@ -170,14 +194,29 @@ export default function DirectoryBrowser({
                             <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
                         </div>
                     )}
-                    {!loading && tree && tree.length === 0 && (
+                    {!loading && error && (
+                        <div className="flex min-h-48 flex-col items-center justify-center gap-3 px-4">
+                            <AlertCircle className="size-6 text-destructive" />
+                            <p className="text-center text-sm text-destructive">
+                                {error}
+                            </p>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRetry}
+                            >
+                                Retry
+                            </Button>
+                        </div>
+                    )}
+                    {!loading && !error && tree && tree.length === 0 && (
                         <div className="flex min-h-48 items-center justify-center">
                             <p className="text-sm text-muted-foreground">
                                 No directories found.
                             </p>
                         </div>
                     )}
-                    {!loading && tree && tree.length > 0 && (
+                    {!loading && !error && tree && tree.length > 0 && (
                         <div>
                             <DirectoryNode
                                 name="/ (root)"

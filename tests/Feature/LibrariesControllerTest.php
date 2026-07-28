@@ -5,6 +5,7 @@ use App\LibraryJobId;
 use App\Models\Execution;
 use App\Models\Library;
 use App\Models\User;
+use App\Models\Worker;
 
 beforeEach(function () {
     $this->user = User::factory()->create();
@@ -142,5 +143,36 @@ it('toggles a job off', function () {
     $this->assertDatabaseMissing('library_jobs', [
         'library_id' => $library->id,
         'job_id' => 'transcode_media',
+    ]);
+});
+
+it('toggles a worker on for a library', function () {
+    $library = Library::factory()->create();
+    $worker = Worker::factory()->create();
+
+    $this->post("/libraries/{$library->id}/toggle-worker", [
+        'worker_id' => $worker->id,
+        'enabled' => true,
+    ])->assertRedirect();
+
+    $this->assertDatabaseHas('library_worker', [
+        'library_id' => $library->id,
+        'worker_id' => $worker->id,
+    ]);
+});
+
+it('toggles a worker off for a library', function () {
+    $library = Library::factory()->create();
+    $worker = Worker::factory()->create();
+    $library->workers()->attach($worker);
+
+    $this->post("/libraries/{$library->id}/toggle-worker", [
+        'worker_id' => $worker->id,
+        'enabled' => false,
+    ])->assertRedirect();
+
+    $this->assertDatabaseMissing('library_worker', [
+        'library_id' => $library->id,
+        'worker_id' => $worker->id,
     ]);
 });

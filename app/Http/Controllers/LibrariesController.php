@@ -9,6 +9,7 @@ use App\LibraryStatus;
 use App\Models\Execution;
 use App\Models\Library;
 use App\Models\LibraryJob;
+use App\Models\Worker;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -51,7 +52,7 @@ class LibrariesController extends Controller
 
     public function show(Library $library): Response
     {
-        $library->load('libraryJobs');
+        $library->load(['libraryJobs', 'workers']);
 
         $recentExecutions = Execution::whereIn(
             'library_job_id',
@@ -62,9 +63,12 @@ class LibrariesController extends Controller
             ->limit(20)
             ->get();
 
+        $allWorkers = Worker::orderBy('name')->get();
+
         return Inertia::render('libraries/[id]/index', [
             'library' => $library,
             'recentExecutions' => $recentExecutions,
+            'allWorkers' => $allWorkers,
             'jobTypes' => collect(LibraryJobId::cases())->map(fn (LibraryJobId $id) => [
                 'value' => $id->value,
                 'label' => match ($id) {
@@ -124,5 +128,21 @@ class LibrariesController extends Controller
         }
 
         return redirect()->route('libraries.show', $library);
+    }
+
+    public function toggleWorker(Request $request, Library $library): RedirectResponse
+    {
+        $validated = $request->validate([
+            'worker_id' => ['required', 'exists:workers,id'],
+            'enabled' => ['required', 'boolean'],
+        ]);
+
+        if ($validated['enabled']) {
+            $library->workers()->syncWithoutDetaching($validated['worker_id']);
+        } else {
+            $library->workers()->detach($validated['worker_id']);
+        }
+
+        return redirect()->back();
     }
 }

@@ -25,11 +25,11 @@
 ## 4. Clean Up Stale Executions
 
 - [x] 4.1 Create an Artisan command `scan:cleanup` that deletes Execution records with `status=QUEUED` where the file path extension is not in the media allowlist
-- [ ] 4.2 Run `php artisan scan:cleanup` after `vendor/bin/sail up -d` to clean stale QUEUED records
-- [ ] 4.3 Verify no legitimate queued items were deleted
+- [x] 4.2 Run `php artisan scan:cleanup` after `vendor/bin/sail up -d` to clean stale QUEUED records
+- [x] 4.3 Verify no legitimate queued items were deleted
 
 ## 5. Verify
 
-- [ ] 5.1 Run `vendor/bin/sail artisan scan:libraries` and confirm no `.d.ts` or other non-media files appear in Execution table
-- [ ] 5.2 Confirm subtitle conversion only triggers for actual subtitle files
-- [ ] 5.3 Run `vendor/bin/sail artisan queue:work --queue=transcode,subtitle --sleep=3 --tries=3` and confirm jobs get processed
+- [x] 5.1 Run `vendor/bin/sail artisan scan:libraries` and confirm no `.d.ts` or other non-media files appear in Execution table
+- [x] 5.2 Confirm subtitle conversion only triggers for actual subtitle files
+- [x] 5.3 Run `vendor/bin/sail artisan queue:work --queue=transcode,subtitle --sleep=3 --tries=3` and confirm jobs get processed

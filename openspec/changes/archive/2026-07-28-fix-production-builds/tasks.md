@@ -12,7 +12,7 @@
 
 ## 3. Verification
 
-- [ ] 3.1 Test production build locally with docker-compose to verify database connection succeeds
-- [ ] 3.2 Verify web application is reachable and serves requests without errors
-- [ ] 3.3 Test environment variable override by setting custom DB_HOST in docker-compose
-- [ ] 3.4 Verify config cache is properly cleared and rebuilt on container restart
+- [x] 3.1 Test production build locally with docker-compose to verify database connection succeeds
+- [x] 3.2 Verify web application is reachable and serves requests without errors
+- [x] 3.3 Test environment variable override by setting custom DB_HOST in docker-compose
+- [x] 3.4 Verify config cache is properly cleared and rebuilt on container restart

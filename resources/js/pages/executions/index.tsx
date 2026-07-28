@@ -1,11 +1,27 @@
 import { Head, router } from '@inertiajs/react';
-import { RotateCcw, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { RotateCcw, XCircle, Play, Square, Pause, Trash2 } from 'lucide-react';
 import { DataTable } from '@/components/data-table';
 import type { Column } from '@/components/data-table';
 import { FilterBar } from '@/components/filter-bar';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import AppLayout from '@/layouts/app-layout';
+import {
+    retry,
+    cancel,
+    start,
+    pause,
+    resume,
+    stop,
+    destroy,
+    batchStart,
+    batchPause,
+    batchResume,
+    batchStop,
+    batchDelete,
+} from '@/actions/App/Http/Controllers/ExecutionsController';
 
 type Execution = {
     id: number;
@@ -31,6 +47,9 @@ type Pagination = {
     links: { url: string | null; label: string; active: boolean }[];
 };
 
+const lifecycleConfirm = (action: string, count: number) =>
+    confirm(`${action} ${count} execution(s)?`);
+
 export default function ExecutionsIndex({
     executions,
     filters,
@@ -40,12 +59,54 @@ export default function ExecutionsIndex({
     filters: Record<string, string>;
     statuses: { value: string; label: string }[];
 }) {
-    const handleRetry = (execution: Execution) => {
-        if (!confirm('Retry this execution?')) {
-return;
-}
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
-        router.post(`/executions/${execution.id}/retry`);
+    const toggleSelect = (id: number) => {
+        const next = new Set(selectedIds);
+        if (next.has(id)) {
+            next.delete(id);
+        } else {
+            next.add(id);
+        }
+        setSelectedIds(next);
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === executions.data.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(
+                new Set(executions.data.map((e: Execution) => e.id)),
+            );
+        }
+    };
+
+    const batchAction = (
+        action: string,
+        url: string,
+        confirmMsg?: string,
+    ) => {
+        if (selectedIds.size === 0) return;
+        if (confirmMsg && !confirm(confirmMsg)) return;
+        router.post(
+            url,
+            { ids: Array.from(selectedIds) },
+            { preserveScroll: true, onFinish: () => setSelectedIds(new Set()) },
+        );
+    };
+
+    const singleAction = (
+        action: string,
+        url: string,
+        confirmMsg?: string,
+    ) => {
+        if (confirmMsg && !confirm(confirmMsg)) return;
+        router.post(url, {}, { preserveScroll: true });
+    };
+
+    const handleRetry = (execution: Execution) => {
+        if (!confirm('Retry this execution?')) return;
+        router.post(retry.url({ execution: execution.id }), {}, { preserveScroll: true });
     };
 
     const cancelConfirm = (status: string) =>
@@ -54,14 +115,34 @@ return;
             : 'Cancel this queued job?';
 
     const handleCancel = (execution: Execution) => {
-        if (!confirm(cancelConfirm(execution.status))) {
-return;
-}
+        if (!confirm(cancelConfirm(execution.status))) return;
+        router.post(cancel.url({ execution: execution.id }), {}, { preserveScroll: true });
+    };
 
-        router.post(`/executions/${execution.id}/cancel`);
+    const handleDelete = (execution: Execution) => {
+        if (!confirm('Delete this execution record?')) return;
+        router.delete(destroy.url({ execution: execution.id }), { preserveScroll: true });
     };
 
     const columns: Column<Execution>[] = [
+        {
+            key: 'select',
+            label: (
+                <Checkbox
+                    checked={
+                        executions.data.length > 0 &&
+                        selectedIds.size === executions.data.length
+                    }
+                    onCheckedChange={toggleSelectAll}
+                />
+            ),
+            render: (e) => (
+                <Checkbox
+                    checked={selectedIds.has(e.id)}
+                    onCheckedChange={() => toggleSelect(e.id)}
+                />
+            ),
+        },
         {
             key: 'file_path',
             label: 'File',
@@ -94,29 +175,91 @@ return;
             label: '',
             render: (e) => (
                 <div className="flex justify-end gap-1">
+                    {(e.status === 'queued' || e.status === 'paused') && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                                singleAction(
+                                    'Start',
+                                    start.url({ execution: e.id }),
+                                )
+                            }
+                            title="Start"
+                        >
+                            <Play className="size-3" />
+                        </Button>
+                    )}
+                    {e.status === 'processing' && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                                singleAction(
+                                    'Pause',
+                                    pause.url({ execution: e.id }),
+                                )
+                            }
+                            title="Pause"
+                        >
+                            <Pause className="size-3" />
+                        </Button>
+                    )}
+                    {e.status === 'paused' && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                                singleAction(
+                                    'Resume',
+                                    resume.url({ execution: e.id }),
+                                )
+                            }
+                            title="Resume"
+                        >
+                            <RotateCcw className="size-3" />
+                        </Button>
+                    )}
                     {e.status === 'failed' && (
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleRetry(e)}
+                            title="Retry"
                         >
                             <RotateCcw className="size-3" />
                         </Button>
                     )}
-                    {(e.status === 'queued' || e.status === 'processing') && (
+                    {(e.status === 'queued' ||
+                        e.status === 'processing' ||
+                        e.status === 'paused') && (
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleCancel(e)}
+                            onClick={() =>
+                                singleAction(
+                                    'Stop',
+                                    stop.url({ execution: e.id }),
+                                    cancelConfirm(e.status),
+                                )
+                            }
+                            title="Stop"
                         >
-                            <XCircle className="size-3" />
+                            <Square className="size-3" />
                         </Button>
                     )}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(e)}
+                        title="Delete"
+                    >
+                        <Trash2 className="size-3" />
+                    </Button>
                 </div>
             ),
         },
     ];
-
 
     return (
         <>
@@ -141,6 +284,98 @@ return;
                     ]}
                 />
 
+                {selectedIds.size > 0 && (
+                    <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
+                        <span className="text-sm text-muted-foreground">
+                            {selectedIds.size} selected
+                        </span>
+                        <div className="ml-auto flex gap-1">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                    batchAction(
+                                        'Start',
+                                        batchStart.url(),
+                                        lifecycleConfirm(
+                                            'Start',
+                                            selectedIds.size,
+                                        ),
+                                    )
+                                }
+                            >
+                                <Play className="mr-1 size-3" />
+                                Start
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                    batchAction(
+                                        'Pause',
+                                        batchPause.url(),
+                                        lifecycleConfirm(
+                                            'Pause',
+                                            selectedIds.size,
+                                        ),
+                                    )
+                                }
+                            >
+                                <Pause className="mr-1 size-3" />
+                                Pause
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                    batchAction(
+                                        'Resume',
+                                        batchResume.url(),
+                                        lifecycleConfirm(
+                                            'Resume',
+                                            selectedIds.size,
+                                        ),
+                                    )
+                                }
+                            >
+                                <RotateCcw className="mr-1 size-3" />
+                                Resume
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                    batchAction(
+                                        'Stop',
+                                        batchStop.url(),
+                                        lifecycleConfirm(
+                                            'Stop',
+                                            selectedIds.size,
+                                        ),
+                                    )
+                                }
+                            >
+                                <Square className="mr-1 size-3" />
+                                Stop
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() =>
+                                    batchAction(
+                                        'Delete',
+                                        batchDelete.url(),
+                                        `Delete ${selectedIds.size} execution(s)?`,
+                                    )
+                                }
+                            >
+                                <Trash2 className="mr-1 size-3" />
+                                Delete
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 <DataTable
                     columns={columns}
                     data={executions.data}
@@ -155,8 +390,12 @@ return;
                                 variant={link.active ? 'default' : 'outline'}
                                 size="sm"
                                 disabled={!link.url}
-                                onClick={() => link.url && router.get(link.url)}
-                                dangerouslySetInnerHTML={{ __html: link.label }}
+                                onClick={() =>
+                                    link.url && router.get(link.url)
+                                }
+                                dangerouslySetInnerHTML={{
+                                    __html: link.label,
+                                }}
                             />
                         ))}
                     </div>

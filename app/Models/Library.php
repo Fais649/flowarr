@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Library extends Model
@@ -46,8 +47,16 @@ class Library extends Model
      */
     public function libraryJobs(): HasMany
     {
-
         return $this->hasMany(LibraryJob::class);
+    }
+
+    /**
+     * @return BelongsToMany<Worker, $this>
+     */
+    public function workers(): BelongsToMany
+    {
+        return $this->belongsToMany(Worker::class, 'library_worker')
+            ->withTimestamps();
     }
 
     /**

@@ -75,4 +75,103 @@ class ExecutionsController extends Controller
 
         return redirect()->back();
     }
+
+    public function start(Execution $execution): RedirectResponse
+    {
+        if (! in_array($execution->status, [ExecutionStatus::QUEUED, ExecutionStatus::PAUSED])) {
+            return redirect()->back();
+        }
+
+        $execution->update(['status' => ExecutionStatus::PROCESSING]);
+
+        return redirect()->back();
+    }
+
+    public function pause(Execution $execution): RedirectResponse
+    {
+        if ($execution->status !== ExecutionStatus::PROCESSING) {
+            return redirect()->back();
+        }
+
+        $execution->update(['status' => ExecutionStatus::PAUSED]);
+
+        return redirect()->back();
+    }
+
+    public function resume(Execution $execution): RedirectResponse
+    {
+        if ($execution->status !== ExecutionStatus::PAUSED) {
+            return redirect()->back();
+        }
+
+        $execution->update(['status' => ExecutionStatus::PROCESSING]);
+
+        return redirect()->back();
+    }
+
+    public function stop(Execution $execution): RedirectResponse
+    {
+        if (! in_array($execution->status, [ExecutionStatus::QUEUED, ExecutionStatus::PROCESSING, ExecutionStatus::PAUSED])) {
+            return redirect()->back();
+        }
+
+        $execution->update(['status' => ExecutionStatus::STOPPED]);
+
+        return redirect()->back();
+    }
+
+    public function destroy(Execution $execution): RedirectResponse
+    {
+        $execution->delete();
+
+        return redirect()->back();
+    }
+
+    public function batchStart(Request $request): RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        Execution::whereIn('id', $ids)
+            ->whereIn('status', [ExecutionStatus::QUEUED, ExecutionStatus::PAUSED])
+            ->update(['status' => ExecutionStatus::PROCESSING]);
+
+        return redirect()->back();
+    }
+
+    public function batchPause(Request $request): RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        Execution::whereIn('id', $ids)
+            ->where('status', ExecutionStatus::PROCESSING)
+            ->update(['status' => ExecutionStatus::PAUSED]);
+
+        return redirect()->back();
+    }
+
+    public function batchResume(Request $request): RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        Execution::whereIn('id', $ids)
+            ->where('status', ExecutionStatus::PAUSED)
+            ->update(['status' => ExecutionStatus::PROCESSING]);
+
+        return redirect()->back();
+    }
+
+    public function batchStop(Request $request): RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        Execution::whereIn('id', $ids)
+            ->whereIn('status', [ExecutionStatus::QUEUED, ExecutionStatus::PROCESSING, ExecutionStatus::PAUSED])
+            ->update(['status' => ExecutionStatus::STOPPED]);
+
+        return redirect()->back();
+    }
+
+    public function batchDelete(Request $request): RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        Execution::whereIn('id', $ids)->delete();
+
+        return redirect()->back();
+    }
 }

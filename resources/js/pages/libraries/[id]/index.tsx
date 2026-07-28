@@ -14,6 +14,14 @@ import {
 } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import AppLayout from '@/layouts/app-layout';
+import { toggleWorker } from '@/actions/App/Http/Controllers/LibrariesController';
+
+type Worker = {
+    id: number;
+    name: string;
+    job_type: string | null;
+    pivot: { worker_id: number; library_id: number };
+};
 
 type Library = {
     id: number;
@@ -22,6 +30,7 @@ type Library = {
     scan_interval: number;
     last_scan: string | null;
     library_jobs: { id: number; job_id: string }[];
+    workers: Worker[];
 };
 
 type Execution = {
@@ -37,22 +46,34 @@ type JobType = {
     label: string;
 };
 
+const JOB_TYPE_LABELS: Record<string, string> = {
+    transcode_media: 'Transcode Media',
+    extract_subs: 'Extract Subtitles',
+    convert_sub: 'Convert Subtitles',
+};
+
 export default function LibraryDetail({
     library,
+    allWorkers,
     recentExecutions,
     jobTypes,
 }: {
     library: Library;
+    allWorkers: Worker[];
     recentExecutions: Execution[];
     jobTypes: JobType[];
 }) {
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const handleToggleJob = (jobId: string, enabled: boolean) => {
-        router.post(`/libraries/${library.id}/toggle-job`, {
-            job_id: jobId,
-            enabled,
-        });
+    const handleToggleWorker = (workerId: number, enabled: boolean) => {
+        router.post(
+            toggleWorker.url({ library: library.id }),
+            {
+                worker_id: workerId,
+                enabled,
+            },
+            { preserveScroll: true },
+        );
     };
 
     const handleScan = () => {
@@ -65,8 +86,8 @@ export default function LibraryDetail({
                 'Delete this library and its job configurations? Executions will be preserved.',
             )
         ) {
-return;
-}
+            return;
+        }
 
         setIsDeleting(true);
         router.delete(`/libraries/${library.id}`);
@@ -91,7 +112,6 @@ return;
             render: (e) => new Date(e.created_at).toLocaleString(),
         },
     ];
-
 
     return (
         <>
@@ -151,10 +171,10 @@ return;
                             </div>
                             <div>
                                 <span className="text-sm text-muted-foreground">
-                                    Enabled Jobs
+                                    Enabled Workers
                                 </span>
                                 <p className="font-medium">
-                                    {library.library_jobs.length}
+                                    {library.workers?.length ?? 0}
                                 </p>
                             </div>
                         </CardContent>
@@ -162,30 +182,46 @@ return;
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Job Toggles</CardTitle>
+                            <CardTitle>Enabled Workers</CardTitle>
                             <CardDescription>
-                                Enable or disable job types for this library
+                                Select which workers are active for this
+                                library
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {jobTypes.map((jobType) => {
-                                const enabled = library.library_jobs.some(
-                                    (j) => j.job_id === jobType.value,
+                            {allWorkers.length === 0 && (
+                                <p className="text-sm text-muted-foreground">
+                                    No workers configured. Create one in the
+                                    Workers tab first.
+                                </p>
+                            )}
+                            {allWorkers.map((worker) => {
+                                const enabled = (library.workers ?? []).some(
+                                    (w: Worker) => w.id === worker.id,
                                 );
 
                                 return (
                                     <div
-                                        key={jobType.value}
+                                        key={worker.id}
                                         className="flex items-center justify-between"
                                     >
-                                        <span className="text-sm font-medium">
-                                            {jobType.label}
-                                        </span>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium">
+                                                {worker.name}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {worker.job_type
+                                                    ? JOB_TYPE_LABELS[
+                                                          worker.job_type
+                                                      ] ?? worker.job_type
+                                                    : '-'}
+                                            </span>
+                                        </div>
                                         <Switch
                                             checked={enabled}
                                             onCheckedChange={(checked) =>
-                                                handleToggleJob(
-                                                    jobType.value,
+                                                handleToggleWorker(
+                                                    worker.id,
                                                     checked,
                                                 )
                                             }
