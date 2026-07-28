@@ -58,23 +58,28 @@ if ! pgrep -f 'php-fpm.*master' > /dev/null 2>&1 && [ ! -f /usr/local/var/run/ph
     exit 1
 fi
 
-# Start queue worker in background (auto-restarts on crash)
-echo "Starting queue worker..."
-QUEUE_PID=""
+# Start per-queue worker processes in parallel (auto-restart on crash)
+echo "Starting queue workers..."
+QUEUE_PIDS=""
 start_queue_worker() {
+    local queue="$1"
     while true; do
-        php artisan queue:work --queue=transcode,subtitle --sleep=3 --tries=3 --max-time=3600
-        echo "Queue worker exited, restarting in 2s..."
+        php artisan queue:work --queue="$queue" --sleep=3 --tries=3 --max-time=3600
+        echo "Queue worker [$queue] exited, restarting in 2s..."
         sleep 2
     done
 }
-start_queue_worker &
-QUEUE_PID=$!
+
+# Start one worker per queue so jobs process concurrently
+start_queue_worker "transcode" &
+QUEUE_PIDS="$QUEUE_PIDS $!"
+start_queue_worker "subtitle" &
+QUEUE_PIDS="$QUEUE_PIDS $!"
 
 echo "Starting nginx..."
 
 # Trap SIGTERM and SIGINT for graceful shutdown
-trap 'echo "Shutting down..."; nginx -s quit; kill $QUEUE_PID 2>/dev/null; kill $(pgrep -f "php-fpm" | grep -v "^$" | tr "\n" " ") 2>/dev/null; exit 0' SIGTERM SIGINT
+trap 'echo "Shutting down..."; nginx -s quit; kill $QUEUE_PIDS 2>/dev/null; kill $(pgrep -f "php-fpm" | grep -v "^$" | tr "\n" " ") 2>/dev/null; exit 0' SIGTERM SIGINT
 
 # Start nginx in foreground
 nginx -g "daemon off;"
