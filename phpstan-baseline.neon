@@ -55,28 +55,10 @@ parameters:
 			path: app/Http/Controllers/DirectoryController.php
 
 		-
-			message: '#^Parameter \#1 \$array \(list\<array\{name\: string, path\: string, children\?\: array\}\>\) of array_values is already a list, call has no effect\.$#'
+			message: '#^Parameter \#1 \$array \(list\<array\{name\: mixed, path\: string, children\?\: array\}\>\) of array_values is already a list, call has no effect\.$#'
 			identifier: arrayValues.list
 			count: 1
 			path: app/Http/Controllers/DirectoryController.php
-
-		-
-			message: '#^Call to function in_array\(\) with string and array\{App\\ExecutionStatus\:\:QUEUED, App\\ExecutionStatus\:\:PROCESSING\} will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Http/Controllers/ExecutionsController.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and App\\ExecutionStatus\:\:FAILED will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Http/Controllers/ExecutionsController.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 2
-			path: app/Http/Controllers/ExecutionsController.php
 
 		-
 			message: '#^Method App\\Http\\Requests\\ExecutionFilterRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
