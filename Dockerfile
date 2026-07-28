@@ -23,6 +23,7 @@ ENV SKIP_WAYFINDER=true
 COPY package.json package-lock.json ./
 RUN npm ci
 
+COPY --from=composer /app/resources/js/wayfinder ./resources/js/wayfinder
 COPY --from=composer /app/resources/js/routes ./resources/js/routes
 COPY --from=composer /app/resources/js/actions ./resources/js/actions
 COPY vite.config.ts tsconfig.json ./
