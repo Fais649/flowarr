@@ -22,15 +22,15 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@b018a67c5604b9c61d7c6a09e0e3fdf2d13f2b1 # v3
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@c85b8a1d31af84ceb563a7ee7da39c2ef2000a0d # v3
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -38,7 +38,7 @@ jobs:
 
       - name: Extract metadata (tags, labels)
         id: meta
-        uses: docker/metadata-action@8e3d2e9d82f4c5e6d84e6ba1b167a7e47ea2ac3f # v5
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -54,7 +54,7 @@ jobs:
             org.opencontainers.image.version=${{ github.ref_name }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@09c5aa3b6fffa82c9750b92b7b18844ce4ea78da # v6
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
