@@ -109,6 +109,7 @@ export default function DirectoryBrowser({
         setLoading(true);
         setTree(null);
         setError(null);
+        setSelectedPath(null);
 
         try {
             const token =
@@ -132,11 +133,13 @@ export default function DirectoryBrowser({
                         'Session expired. Please refresh the page and try again.',
                     );
                 }
+
                 if (response.status === 404) {
                     throw new Error(
                         'Directory API not found. Try refreshing the page.',
                     );
                 }
+
                 throw new Error(
                     `Server error (${response.status}). Check server logs.`,
                 );
@@ -158,8 +161,8 @@ export default function DirectoryBrowser({
 
     useEffect(() => {
         if (open) {
-            setSelectedPath(null);
-            setError(null);
+            // fetchTree is async — setState runs in microtask, no cascade
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             fetchTree();
         }
     }, [open, fetchTree]);
