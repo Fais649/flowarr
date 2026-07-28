@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { RotateCcw, XCircle, Play, Square, Pause, Trash2 } from 'lucide-react';
+import { RotateCcw, Play, Square, Pause, Trash2 } from 'lucide-react';
 import { DataTable } from '@/components/data-table';
 import type { Column } from '@/components/data-table';
 import { FilterBar } from '@/components/filter-bar';
@@ -109,10 +109,7 @@ export default function ExecutionsIndex({
         router.post(retry.url({ execution: execution.id }), {}, { preserveScroll: true });
     };
 
-    const cancelConfirm = (status: string) =>
-        status === 'processing'
-            ? 'Abort this running job?'
-            : 'Cancel this queued job?';
+    
 
     const handleCancel = (execution: Execution) => {
         if (!confirm(cancelConfirm(execution.status))) return;

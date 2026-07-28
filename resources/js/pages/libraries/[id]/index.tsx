@@ -56,12 +56,10 @@ export default function LibraryDetail({
     library,
     allWorkers,
     recentExecutions,
-    jobTypes,
 }: {
     library: Library;
     allWorkers: Worker[];
     recentExecutions: Execution[];
-    jobTypes: JobType[];
 }) {
     const [isDeleting, setIsDeleting] = useState(false);
 
