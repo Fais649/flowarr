@@ -72,6 +72,9 @@ class Library extends Model
                     ->orWhereNull('last_scan')
                     ->orWhereRaw('EXTRACT(EPOCH FROM NOW() - last_scan) >= scan_interval');
             })
-            ->has('libraryJobs');
+            ->where(function (Builder $q): void {
+                $q->has('libraryJobs')
+                    ->orHas('workers');
+            });
     }
 }

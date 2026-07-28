@@ -10,6 +10,7 @@ use App\Models\Execution;
 use App\Models\Library;
 use App\Models\LibraryJob;
 use App\Models\Worker;
+use App\Services\ScannerService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -39,15 +40,25 @@ class LibrariesController extends Controller
         return Inertia::render('libraries/create');
     }
 
-    public function store(StoreLibraryRequest $request): RedirectResponse
+    public function store(StoreLibraryRequest $request, ScannerService $scanner): RedirectResponse
     {
-        Library::create([
+        $library = Library::create([
             'base_path' => $request->base_path,
             'scan_interval' => $request->scan_interval,
-            'status' => LibraryStatus::PENDING_SCAN,
+            'status' => LibraryStatus::SCANNING,
         ]);
 
-        return redirect()->route('libraries.index');
+        try {
+            $scanner->scan($library);
+            $library->update([
+                'status' => LibraryStatus::PENDING,
+                'last_scan' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            $library->update(['status' => LibraryStatus::PENDING]);
+        }
+
+        return redirect()->route('libraries.show', $library);
     }
 
     public function show(Library $library): Response
@@ -100,9 +111,19 @@ class LibrariesController extends Controller
         return redirect()->route('libraries.index');
     }
 
-    public function triggerScan(Library $library): RedirectResponse
+    public function triggerScan(Library $library, ScannerService $scanner): RedirectResponse
     {
-        $library->update(['status' => LibraryStatus::PENDING_SCAN]);
+        $library->update(['status' => LibraryStatus::SCANNING]);
+
+        try {
+            $scanner->scan($library);
+            $library->update([
+                'status' => LibraryStatus::PENDING,
+                'last_scan' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            $library->update(['status' => LibraryStatus::PENDING]);
+        }
 
         return redirect()->route('libraries.show', $library);
     }
