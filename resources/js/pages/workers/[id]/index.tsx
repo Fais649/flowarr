@@ -3,32 +3,25 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { type Worker, JOB_TYPE_LABELS } from '@/types/models';
+import { Switch } from '@/components/ui/switch';
+import { type Worker, JobTypeLabels } from '@/types/models';
 import {
     Card,
     CardContent,
+    CardDescription,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import {
-    update,
-    start,
-    pause,
-    resume,
-    stop,
-    destroy,
-} from '@/actions/App/Http/Controllers/WorkersController';
-
+import { update } from '@/actions/App/Http/Controllers/WorkersController';
 
 export default function WorkerDetail({ worker }: { worker: Worker }) {
-    const handleAction = (
-        action: string,
-        url: string,
-        confirmMsg?: string,
-    ) => {
-        if (confirmMsg && !confirm(confirmMsg)) return;
-        router.post(url, {}, { preserveScroll: true });
+    const handleUpdate = (data: Record<string, unknown>) => {
+        router.patch(
+            update.url({ worker: worker.id }),
+            data,
+            { preserveScroll: true },
+        );
     };
 
     return (
@@ -41,112 +34,48 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                             <ArrowLeft className="size-4" />
                         </a>
                     </Button>
-                    <h1 className="text-2xl font-bold">{worker.name}</h1>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                    <Button
-                        variant="default"
-                        onClick={() =>
-                            handleAction(
-                                'Start',
-                                start.url({ worker: worker.id }),
-                            )
-                        }
-                    >
-                        Start
-                    </Button>
-                    <Button
-                        variant="outline"
-                        onClick={() =>
-                            handleAction(
-                                'Pause',
-                                pause.url({ worker: worker.id }),
-                            )
-                        }
-                    >
-                        Pause
-                    </Button>
-                    <Button
-                        variant="outline"
-                        onClick={() =>
-                            handleAction(
-                                'Resume',
-                                resume.url({ worker: worker.id }),
-                            )
-                        }
-                    >
-                        Resume
-                    </Button>
-                    <Button
-                        variant="outline"
-                        onClick={() =>
-                            handleAction(
-                                'Stop',
-                                stop.url({ worker: worker.id }),
-                            )
-                        }
-                    >
-                        Stop
-                    </Button>
-                    <Button
-                        variant="destructive"
-                        onClick={() => {
-                            if (
-                                confirm(
-                                    `Delete worker "${worker.name}"? This cannot be undone.`,
-                                )
-                            ) {
-                                router.delete(
-                                    destroy.url({ worker: worker.id }),
-                                );
-                            }
-                        }}
-                    >
-                        Delete Worker
-                    </Button>
+                    <h1 className="text-2xl font-bold">
+                        {worker.job_type
+                            ? JobTypeLabels[worker.job_type] ?? worker.job_type
+                            : worker.name}
+                    </h1>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Worker Info</CardTitle>
+                            <CardTitle>Worker Settings</CardTitle>
+                            <CardDescription>
+                                Configure this worker's behavior
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div>
-                                <Label>Name</Label>
-                                <Input
-                                    defaultValue={worker.name}
-                                    onBlur={(e) => {
-                                        const val = e.target.value.trim();
-                                        if (val && val !== worker.name) {
-                                            router.patch(
-                                                update.url({
-                                                    worker: worker.id,
-                                                }),
-                                                { name: val },
-                                                { preserveScroll: true },
-                                            );
-                                        }
-                                    }}
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <Label>Enabled</Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        {worker.enabled ? 'Worker is active' : 'Worker is disabled'}
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={worker.enabled}
+                                    onCheckedChange={(checked) =>
+                                        handleUpdate({ enabled: checked })
+                                    }
                                 />
                             </div>
-                            <div>
-                                <Label>Job Type</Label>
-                                <p className="font-medium">
-                                    {worker.job_type
-                                        ? JOB_TYPE_LABELS[worker.job_type] ??
-                                        worker.job_type
-                                        : '-'}
-                                </p>
-                            </div>
-                            <div>
+
+                            <div className="space-y-2">
                                 <Label>Concurrency</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Number of concurrent processes (1-99)
+                                </p>
                                 <Input
                                     type="number"
                                     min={1}
                                     max={99}
                                     defaultValue={worker.concurrency}
+                                    disabled={!worker.enabled}
                                     onBlur={(e) => {
                                         const val = Number(e.target.value);
                                         if (
@@ -154,35 +83,59 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                                             val <= 99 &&
                                             val !== worker.concurrency
                                         ) {
-                                            router.patch(
-                                                update.url({
-                                                    worker: worker.id,
-                                                }),
-                                                { concurrency: val },
-                                                { preserveScroll: true },
-                                            );
+                                            handleUpdate({ concurrency: val });
                                         }
                                     }}
                                 />
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <Label>Replace Original</Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Replace original files with processed versions
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={worker.replace_original}
+                                    disabled={!worker.enabled}
+                                    onCheckedChange={(checked) =>
+                                        handleUpdate({ replace_original: checked })
+                                    }
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Worker Info</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div>
+                                <span className="text-sm text-muted-foreground">
+                                    Job Type
+                                </span>
+                                <p className="font-medium">
+                                    {worker.job_type
+                                        ? JobTypeLabels[worker.job_type] ?? worker.job_type
+                                        : '-'}
+                                </p>
                             </div>
                             <div>
                                 <span className="text-sm text-muted-foreground">
                                     Registered
                                 </span>
                                 <p className="font-medium">
-                                    {new Date(
-                                        worker.created_at,
-                                    ).toLocaleString()}
+                                    {new Date(worker.created_at).toLocaleString()}
                                 </p>
                             </div>
                             <div>
                                 <span className="text-sm text-muted-foreground">
-                                    Last Heartbeat
+                                    Last Updated
                                 </span>
                                 <p className="font-medium">
-                                    {new Date(
-                                        worker.updated_at,
-                                    ).toLocaleString()}
+                                    {new Date(worker.updated_at).toLocaleString()}
                                 </p>
                             </div>
                         </CardContent>
@@ -198,7 +151,7 @@ WorkerDetail.layout = (page: React.ReactNode) => (
         breadcrumbs={[
             { title: 'Dashboard', href: '/dashboard' },
             { title: 'Workers', href: '/workers' },
-            { title: worker?.name ?? 'Detail', href: '#' },
+            { title: 'Detail', href: '#' },
         ]}
     >
         {page}

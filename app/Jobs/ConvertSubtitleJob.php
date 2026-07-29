@@ -18,6 +18,7 @@ class ConvertSubtitleJob implements DispatchableJob, ShouldQueue
 
     public function __construct(
         private string $filePath,
+        public bool $replaceOriginal = false,
         ?int $executionId = null,
     ) {
         $this->onQueue(config('queue.queues.subtitle', 'subtitle'));

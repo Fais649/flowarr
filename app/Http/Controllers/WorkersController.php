@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\ExecutionStatus;
-use App\Http\Requests\StoreWorkerRequest;
 use App\Http\Requests\UpdateWorkerRequest;
 use App\Models\Execution;
 use App\Models\LibraryJob;
@@ -30,25 +29,11 @@ class WorkersController extends Controller
         ]);
     }
 
-    public function store(StoreWorkerRequest $request): RedirectResponse
-    {
-        Worker::create($request->validated());
-
-        return redirect()->route('workers.index');
-    }
-
     public function update(UpdateWorkerRequest $request, Worker $worker): RedirectResponse
     {
         $worker->update($request->validated());
 
         return redirect()->back();
-    }
-
-    public function destroy(Worker $worker): RedirectResponse
-    {
-        $worker->delete();
-
-        return redirect()->route('workers.index');
     }
 
     public function start(Worker $worker): RedirectResponse

@@ -7,6 +7,7 @@ use App\Models\Execution;
 use App\Models\Library;
 use App\Models\Setting;
 use App\Models\User;
+use App\Models\Worker;
 use Illuminate\Support\Facades\File;
 
 beforeEach(function () {
@@ -29,7 +30,11 @@ it('creates executions for files needing transcode', function () {
         'base_path' => $this->mediaDir,
         'status' => LibraryStatus::PENDING_SCAN,
     ]);
-    $library->libraryJobs()->create(['job_id' => LibraryJobId::TRANSCODE_MEDIA]);
+    $worker = Worker::factory()->create([
+        'job_type' => LibraryJobId::TRANSCODE_MEDIA,
+        'enabled' => true,
+    ]);
+    $library->workers()->attach($worker);
 
     $this->artisan('scan:libraries')->assertSuccessful();
 
@@ -53,6 +58,11 @@ it('skips files that already have queued executions', function () {
         'base_path' => $this->mediaDir,
         'status' => LibraryStatus::PENDING_SCAN,
     ]);
+    $worker = Worker::factory()->create([
+        'job_type' => LibraryJobId::TRANSCODE_MEDIA,
+        'enabled' => true,
+    ]);
+    $library->workers()->attach($worker);
     $libraryJob = $library->libraryJobs()->create(['job_id' => LibraryJobId::TRANSCODE_MEDIA]);
     Execution::factory()->create([
         'library_job_id' => $libraryJob->id,
@@ -72,6 +82,11 @@ it('updates library last_scan after scanning', function () {
         'status' => LibraryStatus::PENDING_SCAN,
         'last_scan' => null,
     ]);
+    $worker = Worker::factory()->create([
+        'job_type' => LibraryJobId::TRANSCODE_MEDIA,
+        'enabled' => true,
+    ]);
+    $library->workers()->attach($worker);
     $libraryJob = $library->libraryJobs()->create(['job_id' => LibraryJobId::TRANSCODE_MEDIA]);
 
     $exitCode = $this->artisan('scan:libraries')->run();
@@ -89,7 +104,11 @@ it('scans PENDING libraries whose interval has elapsed', function () {
         'last_scan' => now()->subHours(2),
         'scan_interval' => 60,
     ]);
-    $library->libraryJobs()->create(['job_id' => LibraryJobId::TRANSCODE_MEDIA]);
+    $worker = Worker::factory()->create([
+        'job_type' => LibraryJobId::TRANSCODE_MEDIA,
+        'enabled' => true,
+    ]);
+    $library->workers()->attach($worker);
 
     $this->artisan('scan:libraries')->assertSuccessful();
 
@@ -106,7 +125,11 @@ it('skips PENDING libraries whose interval has not elapsed', function () {
         'last_scan' => now(),
         'scan_interval' => 3600,
     ]);
-    $library->libraryJobs()->create(['job_id' => LibraryJobId::TRANSCODE_MEDIA]);
+    $worker = Worker::factory()->create([
+        'job_type' => LibraryJobId::TRANSCODE_MEDIA,
+        'enabled' => true,
+    ]);
+    $library->workers()->attach($worker);
 
     $this->artisan('scan:libraries')->assertSuccessful();
 
@@ -124,7 +147,11 @@ it('respects scan concurrency limit', function () {
         'status' => LibraryStatus::PENDING_SCAN,
         'last_scan' => null,
     ]);
-    $library1->libraryJobs()->create(['job_id' => LibraryJobId::TRANSCODE_MEDIA]);
+    $worker = Worker::factory()->create([
+        'job_type' => LibraryJobId::TRANSCODE_MEDIA,
+        'enabled' => true,
+    ]);
+    $library1->workers()->attach($worker);
 
     $dir2 = storage_path('app/testing_scan_concurrency_'.uniqid());
     File::makeDirectory($dir2, 0777, true, true);
@@ -136,7 +163,7 @@ it('respects scan concurrency limit', function () {
         'status' => LibraryStatus::PENDING_SCAN,
         'last_scan' => null,
     ]);
-    $library2->libraryJobs()->create(['job_id' => LibraryJobId::TRANSCODE_MEDIA]);
+    $library2->workers()->attach($worker);
 
     $this->artisan('scan:libraries')->assertSuccessful();
 
@@ -163,7 +190,11 @@ it('scans PENDING_SCAN libraries regardless of interval', function () {
         'last_scan' => now(),
         'scan_interval' => 3600,
     ]);
-    $library->libraryJobs()->create(['job_id' => LibraryJobId::TRANSCODE_MEDIA]);
+    $worker = Worker::factory()->create([
+        'job_type' => LibraryJobId::TRANSCODE_MEDIA,
+        'enabled' => true,
+    ]);
+    $library->workers()->attach($worker);
 
     $this->artisan('scan:libraries')->assertSuccessful();
 

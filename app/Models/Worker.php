@@ -8,6 +8,7 @@ use Database\Factories\WorkerFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 #[ObservedBy([WorkerObserver::class])]
 class Worker extends Model
@@ -20,11 +21,10 @@ class Worker extends Model
         'job_type',
         'concurrency',
         'replace_original',
+        'enabled',
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
      * @return array<string, string>
      */
     protected function casts(): array
@@ -33,6 +33,13 @@ class Worker extends Model
             'job_type' => LibraryJobId::class,
             'concurrency' => 'integer',
             'replace_original' => 'boolean',
+            'enabled' => 'boolean',
         ];
+    }
+
+    public function libraries(): BelongsToMany
+    {
+        return $this->belongsToMany(Library::class, 'library_worker')
+            ->withTimestamps();
     }
 }

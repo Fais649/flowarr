@@ -7,7 +7,6 @@ use App\LibraryJobId;
 use App\Models\Execution;
 use App\Models\Library;
 use App\Models\LibraryJob;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class ScannerService
@@ -26,29 +25,35 @@ class ScannerService
             return;
         }
 
-        /** @var Collection<int, LibraryJob> */
-        $enabledJobs = new Collection;
-        if (! $library->workers()->exists()) {
+        $workers = $library->workers->where('enabled', true);
+
+        if ($workers->isEmpty()) {
             return;
         }
 
-        $workers = $library->workers;
+        /** @var array<string, array{library_job: LibraryJob, replace_original: bool}> */
+        $jobMap = [];
         foreach ($workers as $worker) {
             $jobType = $worker->job_type;
             if ($jobType) {
-                $enabledJobs->push(
-                    $library->libraryJobs()->firstOrCreate([
-                        'job_id' => $jobType,
-                    ])
-                );
+                $libraryJob = $library->libraryJobs()->firstOrCreate([
+                    'job_id' => $jobType,
+                ]);
+                $jobMap[$jobType->value] = [
+                    'library_job' => $libraryJob,
+                    'replace_original' => $worker->replace_original,
+                ];
             }
         }
 
         $files = $this->collectMediaFiles($basePath);
 
         foreach ($files as $filePath) {
-            foreach ($enabledJobs as $libraryJob) {
+            foreach ($jobMap as $entry) {
+                /** @var LibraryJob $libraryJob */
+                $libraryJob = $entry['library_job'];
                 $jobId = $libraryJob->job_id;
+                $replaceOriginal = $entry['replace_original'];
 
                 try {
                     if ($this->isJobNeededForFile($filePath, $jobId)) {
@@ -56,7 +61,7 @@ class ScannerService
                             continue;
                         }
 
-                        $this->dispatchJob($filePath, $libraryJob, $jobId);
+                        $this->dispatchJob($filePath, $replaceOriginal, $libraryJob, $jobId);
                     }
                 } catch (\Throwable $e) {
                     Log::warning("Skipping file {$filePath} for job {$jobId->value}: {$e->getMessage()}");
@@ -203,7 +208,7 @@ class ScannerService
             ->exists();
     }
 
-    private function dispatchJob(string $filePath, LibraryJob $libraryJob, LibraryJobId $jobId): void
+    private function dispatchJob(string $filePath, bool $replaceOriginal, LibraryJob $libraryJob, LibraryJobId $jobId): void
     {
         $execution = Execution::create([
             'library_job_id' => $libraryJob->id,
@@ -213,7 +218,7 @@ class ScannerService
 
         try {
             $jobClass = $jobId->getJobClass();
-            $job = new $jobClass($filePath);
+            $job = new $jobClass($filePath, $replaceOriginal);
             $job->setExecutionId($execution->id);
             dispatch($job);
         } catch (\Throwable $e) {

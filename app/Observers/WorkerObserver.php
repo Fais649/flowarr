@@ -9,7 +9,7 @@ class WorkerObserver
 {
     public function updated(Worker $worker): void
     {
-        if ($worker->wasChanged('concurrency')) {
+        if ($worker->wasChanged('concurrency', 'enabled')) {
             OrchestrateWorkersJob::dispatch($worker);
         }
     }

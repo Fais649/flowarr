@@ -28,6 +28,8 @@ class WorkerDefaultsSeeder extends Seeder
                 [
                     'name' => $defaultName,
                     'concurrency' => $concurrency,
+                    'replace_original' => false,
+                    'enabled' => true,
                 ],
             );
         }

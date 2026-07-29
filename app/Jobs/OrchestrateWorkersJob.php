@@ -53,10 +53,10 @@ class OrchestrateWorkersJob implements ShouldQueue
         };
 
         if ($programName) {
-            $logger->info($programName);
-            $this->syncProgram($supervisor, $programName, $worker->concurrency, $logger);
+            $target = $worker->enabled ? $worker->concurrency : 0;
+            $logger->info("{$programName} (target: {$target})");
+            $this->syncProgram($supervisor, $programName, $target, $logger);
         }
-
     }
 
     private function syncProgram(SupervisorService $supervisor, string $program, int $target, Logger $logger): void

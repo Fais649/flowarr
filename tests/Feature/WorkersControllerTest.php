@@ -29,25 +29,6 @@ it('shows worker detail', function () {
         ->assertInertia(fn ($page) => $page->component('workers/[id]/index'));
 });
 
-it('creates a worker', function () {
-    $this->post('/workers', [
-        'name' => 'Test Worker',
-        'job_type' => LibraryJobId::TRANSCODE_MEDIA->value,
-        'concurrency' => 2,
-    ])->assertRedirect('/workers');
-
-    $this->assertDatabaseHas('workers', [
-        'name' => 'Test Worker',
-        'job_type' => LibraryJobId::TRANSCODE_MEDIA->value,
-        'concurrency' => 2,
-    ]);
-});
-
-it('validates worker creation', function () {
-    $this->post('/workers', [])
-        ->assertSessionHasErrors(['name', 'job_type', 'concurrency']);
-});
-
 it('updates a worker', function () {
     $worker = Worker::factory()->create();
 
@@ -61,15 +42,6 @@ it('updates a worker', function () {
         'name' => 'Updated Name',
         'concurrency' => 5,
     ]);
-});
-
-it('deletes a worker', function () {
-    $worker = Worker::factory()->create();
-
-    $this->delete("/workers/{$worker->id}")
-        ->assertRedirect('/workers');
-
-    $this->assertDatabaseMissing('workers', ['id' => $worker->id]);
 });
 
 it('starts executions for a worker type', function () {

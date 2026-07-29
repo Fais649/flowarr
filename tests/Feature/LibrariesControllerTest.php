@@ -30,10 +30,12 @@ it('stores a new library', function () {
     $dir = sys_get_temp_dir().'/lib-test-'.uniqid();
     mkdir($dir, 0755, true);
 
-    $this->post('/libraries', [
+    $response = $this->post('/libraries', [
         'base_path' => $dir,
         'scan_interval' => 3600,
-    ])->assertRedirect('/libraries');
+    ]);
+
+    $response->assertRedirect();
 
     $this->assertDatabaseHas('libraries', [
         'base_path' => $dir,

@@ -59,10 +59,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     }
 
     Route::get('workers', [WorkersController::class, 'index'])->name('workers.index');
-    Route::post('workers', [WorkersController::class, 'store'])->name('workers.store');
     Route::get('workers/{worker}', [WorkersController::class, 'show'])->name('workers.show');
     Route::patch('workers/{worker}', [WorkersController::class, 'update'])->name('workers.update');
-    Route::delete('workers/{worker}', [WorkersController::class, 'destroy'])->name('workers.destroy');
     Route::post('workers/start-all', [WorkersController::class, 'startAll'])->name('workers.start-all');
     Route::post('workers/pause-all', [WorkersController::class, 'pauseAll'])->name('workers.pause-all');
     Route::post('workers/resume-all', [WorkersController::class, 'resumeAll'])->name('workers.resume-all');

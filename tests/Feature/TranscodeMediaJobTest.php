@@ -15,7 +15,7 @@ beforeEach(function () {
     }
 
     $this->sourceFile = $this->tempDir.'/test.mkv';
-    $this->outputPath = $this->tempDir.'/testHEVC.mkv';
+    $this->outputPath = $this->tempDir.'/test_HEVC.mkv';
 
     // Generate a simple dummy video file using ffmpeg
     $ffmpeg = config('services.ffmpeg.bin', 'ffmpeg');

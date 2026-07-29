@@ -4,9 +4,10 @@ export type Worker = {
     job_type: string | null;
     pivot: { worker_id: number; library_id: number };
     concurrency: number;
+    replace_original: boolean;
+    enabled: boolean;
     created_at: string;
     updated_at: string;
-    replace_original: boolean;
 };
 
 

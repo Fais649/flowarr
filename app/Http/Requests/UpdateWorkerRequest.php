@@ -16,7 +16,8 @@ class UpdateWorkerRequest extends FormRequest
         return [
             'name' => ['sometimes', 'string', 'max:255'],
             'concurrency' => ['sometimes', 'integer', 'min:1', 'max:99'],
-            'replace_original' => ['required', 'boolean'],
+            'replace_original' => ['sometimes', 'boolean'],
+            'enabled' => ['sometimes', 'boolean'],
         ];
     }
 }

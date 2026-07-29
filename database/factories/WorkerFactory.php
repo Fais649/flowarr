@@ -13,6 +13,8 @@ class WorkerFactory extends Factory
             'name' => fake()->word(),
             'job_type' => fake()->randomElement(LibraryJobId::cases()),
             'concurrency' => fake()->numberBetween(1, 4),
+            'replace_original' => false,
+            'enabled' => true,
         ];
     }
 }
