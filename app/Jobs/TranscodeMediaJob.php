@@ -18,6 +18,7 @@ class TranscodeMediaJob implements DispatchableJob, ShouldQueue
 
     public function __construct(
         public string $filePath,
+        public bool $replaceOriginal = false,
         protected ?Process $process = null,
         ?int $executionId = null,
     ) {
@@ -98,6 +99,12 @@ class TranscodeMediaJob implements DispatchableJob, ShouldQueue
             Log::error("Transcode failed for {$this->filePath}: {$message}");
 
             throw new \RuntimeException($message);
+        }
+
+        if ($this->replaceOriginal) {
+            unlink($inputPath);
+            rename($outputPath, $inputPath);
+            Log::info("Replaced original file with transcoded version: {$inputPath}");
         }
 
         $this->markExecutionAsCompleted();

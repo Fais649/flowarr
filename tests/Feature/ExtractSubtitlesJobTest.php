@@ -37,17 +37,17 @@ it('successfully extracts subtitles using a mock process', function () {
 
     $mock = Mockery::mock(Process::class);
     $mock->shouldReceive('run')->once();
-    $mock->shouldReceive('start')->twice();
-    $mock->shouldReceive('setTimeout')->with(null)->twice();
+    $mock->shouldReceive('start')->times(2);
+    $mock->shouldReceive('setTimeout')->with(null)->times(2);
     $mock->shouldReceive('isRunning')->times(4)->andReturn(true, false, true, false);
-    $mock->shouldReceive('checkTimeout')->twice();
+    $mock->shouldReceive('checkTimeout')->times(2);
     $mock->shouldReceive('isSuccessful')->times(3)->andReturn(true);
     $mock->shouldReceive('getErrorOutput')->andReturn('');
     $mock->shouldReceive('getOutput')->andReturn($probeOutput);
 
     $factory = fn (array $command) => $mock;
 
-    $job = new ExtractSubtitlesJob($this->videoFile, $factory);
+    $job = new ExtractSubtitlesJob($this->videoFile, true, $factory);
     $job->handle();
 
     expect(true)->toBeTrue();
@@ -81,7 +81,7 @@ it('strips internal subtitle tracks from mkv after extraction', function () {
     $streamsBefore = json_decode($probeBefore->getOutput(), true);
     $hasSubBefore = collect($streamsBefore['streams'] ?? [])->contains(fn ($s) => str_contains($s['codec_name'] ?? '', 'sub'));
 
-    $job = new ExtractSubtitlesJob($this->videoFile);
+    $job = new ExtractSubtitlesJob($this->videoFile, true);
     $job->handle();
 
     $probeAfter = new Process(['ffprobe', '-v', 'error', '-select_streams', 's', '-show_entries', 'stream=codec_name', '-of', 'json', $this->videoFile]);

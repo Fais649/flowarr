@@ -46,7 +46,7 @@ it('successfully transcodes the generated mkv file using a mock process', functi
     $processMock->shouldReceive('isSuccessful')->andReturn(true);
     $processMock->shouldReceive('getErrorOutput')->andReturn('');
 
-    $job = new TranscodeMediaJob($this->sourceFile, $processMock);
+    $job = new TranscodeMediaJob($this->sourceFile, false, $processMock);
     $job->handle();
 
     expect(true)->toBeTrue();
@@ -118,7 +118,7 @@ it('updates execution status when executionId is provided', function () {
     $processMock->shouldReceive('isSuccessful')->andReturn(true);
     $processMock->shouldReceive('getErrorOutput')->andReturn('');
 
-    $job = new TranscodeMediaJob($this->sourceFile, $processMock);
+    $job = new TranscodeMediaJob($this->sourceFile, false, $processMock);
     $job->setExecutionId($execution->id);
     $job->handle();
 

@@ -27,6 +27,7 @@ class ExtractSubtitlesJob implements DispatchableJob, ShouldQueue
 
     public function __construct(
         public string $filePath,
+        public bool $replaceOriginal = false,
         protected ?Closure $processFactory = null,
         ?int $executionId = null,
     ) {
@@ -129,7 +130,7 @@ class ExtractSubtitlesJob implements DispatchableJob, ShouldQueue
                 }
             }
 
-            if (! empty($streams)) {
+            if ($this->replaceOriginal && ! empty($streams)) {
                 $stripCommand = [
                     'mkvmerge',
                     '-o', $outputFile,

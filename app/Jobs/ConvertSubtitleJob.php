@@ -76,7 +76,9 @@ class ConvertSubtitleJob implements DispatchableJob, ShouldQueue
                 throw new Exception(sprintf('ffmpeg command failed: %s', $convert->getErrorOutput()));
             }
 
-            unlink($this->filePath);
+            if ($this->replaceOriginal) {
+                unlink($this->filePath);
+            }
         } catch (Exception $e) {
             $this->markExecutionAsFailed();
             Log::error(sprintf('ConvertSubtitleJob Exception encountered: %s', $e->getMessage()));
