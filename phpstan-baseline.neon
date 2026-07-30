@@ -150,11 +150,6 @@ parameters:
 			count: 1
 			path: app/Services/ScannerService.php
 
-		-
-			message: '#^Call to an undefined method App\\Services\\MediaProbeResult\:\:hasEmbeddedSubtitles\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Services/ScannerService.php
 
 		-
 			message: '#^Method App\\Services\\ScannerService\:\:collectMediaFiles\(\) return type has no value type specified in iterable type array\.$#'

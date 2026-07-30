@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Log\Logger;
+use LogicException;
 use Symfony\Component\Process\Process;
 
 class SupervisorService
@@ -36,6 +37,11 @@ class SupervisorService
         return $process->getOutput();
     }
 
+    /**
+     * @param  array<string>  $command
+     *
+     * @throws LogicException
+     */
     public function runCommand(array $command): bool
     {
         array_splice($command, 1, 0, ['-s', 'unix:///var/run/supervisor.sock']);
@@ -45,6 +51,4 @@ class SupervisorService
 
         return $process->isSuccessful();
     }
-
-    public function getRunningWorkers(): array {}
 }

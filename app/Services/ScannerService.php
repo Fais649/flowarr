@@ -35,15 +35,14 @@ class ScannerService
         $jobMap = [];
         foreach ($workers as $worker) {
             $jobType = $worker->job_type;
-            if ($jobType) {
-                $libraryJob = $library->libraryJobs()->firstOrCreate([
-                    'job_id' => $jobType,
-                ]);
-                $jobMap[$jobType->value] = [
-                    'library_job' => $libraryJob,
-                    'replace_original' => $worker->replace_original,
-                ];
-            }
+            assert($jobType instanceof LibraryJobId);
+            $libraryJob = $library->libraryJobs()->firstOrCreate([
+                'job_id' => $jobType,
+            ]);
+            $jobMap[$jobType->value] = [
+                'library_job' => $libraryJob,
+                'replace_original' => $worker->replace_original,
+            ];
         }
 
         $files = $this->collectMediaFiles($basePath);
