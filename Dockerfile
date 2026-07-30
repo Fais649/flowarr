@@ -87,7 +87,7 @@ COPY --from=composer /app/public ./public
 COPY --from=assets /app/public/build ./public/build
 
 # Copy production config files
-COPY docker/prod/nginx.conf /etc/nginx/http.d/default.conf
+COPY docker/prod/nginx.conf /etc/nginx/nginx.conf
 COPY docker/prod/php.ini /usr/local/etc/php/conf.d/production.ini
 COPY docker/prod/docker-entrypoint.sh /usr/local/bin/
 COPY docker/prod/worker-supervisor.sh /usr/local/bin/
