@@ -61,7 +61,7 @@ sync_workers() {
                     "transcode_media" => "transcode",
                     default => "subtitle",
                 };
-                $safeName = str_replace([" ","\"","'","|"], "_", $w->name);
+                $safeName = str_replace([" ","\"",chr(39),"|"], "_", $w->name);
                 echo "{$w->id}|{$queue}|{$safeName}|{$w->concurrency}\n";
             }
         }
