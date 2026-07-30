@@ -31,8 +31,10 @@ tests-browser
 .env.local
 .env.production
 # Keep .env.example.docker (needed at runtime for first boot)
-!.env.example.docker
+!.env.prod.example
+!.env.example
 docker/
+!docker/prod/
 openspec/
 rr/
 .docker
