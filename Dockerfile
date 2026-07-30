@@ -46,6 +46,7 @@ RUN apk add --no-cache \
         postgresql-client \
         su-exec \
         shadow \
+        supervisor \
     && rm -rf /var/cache/apk/*
 
 # Install PHP extensions
@@ -90,14 +91,13 @@ COPY --from=assets /app/public/build ./public/build
 COPY docker/prod/nginx.conf /etc/nginx/nginx.conf
 COPY docker/prod/php.ini /usr/local/etc/php/conf.d/production.ini
 COPY docker/prod/docker-entrypoint.sh /usr/local/bin/
-COPY docker/prod/worker-supervisor.sh /usr/local/bin/
+COPY docker/prod/supervisord.conf /etc/supervisord.conf
 
 # Create required Laravel directories
 RUN mkdir -p bootstrap/cache storage/framework/cache/data \
         storage/framework/sessions storage/framework/views \
         storage/logs public/build && \
-    # chown -R www-data:www-data storage bootstrap/cache && \
-    chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/worker-supervisor.sh
+    chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Pre-warm caches (config cache will be rebuilt at runtime after .env substitution)
 RUN cp .env.prod.example .env && \
