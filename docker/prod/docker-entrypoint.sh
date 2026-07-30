@@ -6,7 +6,7 @@ PUID=${PUID:-1000}
 PGID=${PGID:-1000}
 
 groupmod -o -g $PGID www-data
-usermod -o -g $PUID www-data
+usermod -o -u $PUID www-data
 addgroup www-data video || true
 addgroup www-data render || true
 chown -R www-data:www-data storage bootstrap/cache
@@ -14,26 +14,15 @@ chown -R www-data:www-data storage bootstrap/cache
 APP_DIR=/var/www/html
 cd "$APP_DIR"
 # Create .env from example if it doesn't exist
-if [ ! -f .env.prod ]; then
-    echo ".env.prod missing! run cp .env.prod.example .env.prod"
-    exit 1
-fi
+ if [ ! -f .env.prod ]; then
+     cp .env.prod.example .env.prod
+     echo "ERROR: .env.prod not found. Created from
+ template."
+     echo "Please configure .env.prod and restart."
+     exit 1
+ fi
 
-# Handle APP_KEY — write to .env, NOT append
-if [ -z "${APP_KEY:-}" ] || [ "${APP_KEY}" = "base64:" ]; then
-    echo "No APP_KEY provided — generating one..."
-    php artisan key:generate --force
-    echo "APP_KEY generated. WARNING: Sessions will be lost on restart unless you set APP_KEY in your .env file."
-else
-    RAW_KEY="${APP_KEY}"
-    unset APP_KEY
-    case "$RAW_KEY" in
-        base64:*) PREFIXED_KEY="$RAW_KEY" ;;
-        *) PREFIXED_KEY="base64:${RAW_KEY}" ;;
-    esac
-    sed -i '/^APP_KEY=/d' .env
-    echo "APP_KEY=${PREFIXED_KEY}" >> .env
-fi
+ cp .env.prod .env
 
 # Clear and rebuild config cache (env values changed)
 php artisan config:clear

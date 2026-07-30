@@ -9,7 +9,7 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progre
 COPY . .
 # Create minimal .env so artisan can bootstrap, then run scripts and generate wayfinder types
 RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php && \
-    cp .env.prod .env && \
+    cp .env.prod.example .env && \
     php artisan key:generate --force && \
     php artisan wayfinder:generate
 
@@ -76,7 +76,7 @@ COPY --from=composer /app/config ./config
 COPY --from=composer /app/database ./database
 COPY --from=composer /app/resources ./resources
 COPY --from=composer /app/routes ./routes
-COPY --from=composer /app/.env.prod .env.prod
+COPY --from=composer /app/.env.prod.example .env.prod.example
 COPY --from=composer /app/composer.json .
 COPY --from=composer /app/composer.lock .
 COPY --from=composer /app/artisan .
@@ -99,7 +99,7 @@ RUN mkdir -p bootstrap/cache storage/framework/cache/data \
     chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/worker-supervisor.sh
 
 # Pre-warm caches (config cache will be rebuilt at runtime after .env substitution)
-RUN cp .env.prod .env && \
+RUN cp .env.prod.example .env && \
     php artisan key:generate --force && \
     php artisan config:cache && \
     php artisan route:cache && \

@@ -1,10 +1,54 @@
 services:
+  flowarr:
+    container_name: flowarr
+    image: ghcr.io/fais/flowarr:latest
+    build: .
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      APP_KEY: "${APP_KEY}"
+      APP_URL: "https://${DOMAIN:-flowarr.example.com}"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DB_HOST: ${DB_HOST:-flowarr-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_DATABASE: ${DB_DATABASE:-flowarr}
+      DB_USERNAME: ${DB_USERNAME:-flowarr}
+      DB_PASSWORD: "${DB_PASSWORD}"
+      REDIS_HOST: ${REDIS_HOST:-flowarr-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      LOG_LEVEL: warning
+      RUN_MIGRATIONS: "true"
+      QUEUE_CONNECTION: database
+      SESSION_DRIVER: database
+      CACHE_STORE: redis
+      APP_NAME: ${APP_NAME:-Flowarr}
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media
+      - flowarr-storage:/var/www/html/storage
+      - ./.env.prod:/var/www/html/.env.prod
+    depends_on:
+      flowarr-postgres:
+        condition: service_healthy
+      flowarr-redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - flowarr
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.flowarr.rule=Host(`${DOMAIN:-flowarr.example.com}`)"
+      - "traefik.http.routers.flowarr.entrypoints=websecure"
+      - "traefik.http.routers.flowarr.tls=true"
+      - "traefik.http.services.flowarr.loadbalancer.server.port=8080"
+      - "traefik.http.services.flowarr.loadbalancer.passhostheader=true"
+
   flowarr-postgres:
     container_name: flowarr-postgres
     image: postgres:18-alpine
     environment:
-      PUID: ${PUID:-1000}
-      PGID: ${PGID:-1000}
       POSTGRES_DB: ${DB_DATABASE:-flowarr}
       POSTGRES_USER: ${DB_USERNAME:-flowarr}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -33,48 +77,6 @@ services:
     networks:
       - flowarr
 
-  flowarr:
-    container_name: flowarr
-    image: ghcr.io/fais/flowarr:latest
-    build: .
-    environment:
-      APP_KEY: "${APP_KEY}"
-      APP_URL: "https://${DOMAIN:-flowarr.example.com}"
-      APP_ENV: production
-      APP_DEBUG: "false"
-      DB_HOST: ${DB_HOST:-flowarr-postgres}
-      DB_PORT: ${DB_PORT:-5432}
-      DB_DATABASE: ${DB_DATABASE:-flowarr}
-      DB_USERNAME: ${DB_USERNAME:-flowarr}
-      DB_PASSWORD: "${DB_PASSWORD}"
-      REDIS_HOST: ${REDIS_HOST:-flowarr-redis}
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      LOG_LEVEL: warning
-      RUN_MIGRATIONS: "true"
-      QUEUE_CONNECTION: database
-      SESSION_DRIVER: database
-      CACHE_STORE: redis
-      APP_NAME: ${APP_NAME:-Flowarr}
-    volumes:
-      - ${MEDIA_PATH:-./media}:/media
-      - flowarr-storage:/var/www/html/storage
-    depends_on:
-      flowarr-postgres:
-        condition: service_healthy
-      flowarr-redis:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - flowarr
-      - traefik
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik"
-      - "traefik.http.routers.flowarr.rule=Host(`${DOMAIN:-flowarr.example.com}`)"
-      - "traefik.http.routers.flowarr.entrypoints=websecure"
-      - "traefik.http.routers.flowarr.tls=true"
-      - "traefik.http.services.flowarr.loadbalancer.server.port=8080"
-      - "traefik.http.services.flowarr.loadbalancer.passhostheader=true"
 
 volumes:
   postgres-data:
