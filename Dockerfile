@@ -45,6 +45,7 @@ RUN apk add --no-cache \
         curl \
         postgresql-client \
         su-exec \
+        shadow \
     && rm -rf /var/cache/apk/*
 
 # Install PHP extensions
