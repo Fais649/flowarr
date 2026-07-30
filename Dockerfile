@@ -9,7 +9,7 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progre
 COPY . .
 # Create minimal .env so artisan can bootstrap, then run scripts and generate wayfinder types
 RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php && \
-    cp .env.example.docker .env && \
+    cp .env.prod .env && \
     php artisan key:generate --force && \
     php artisan wayfinder:generate
 
@@ -44,6 +44,7 @@ RUN apk add --no-cache \
         bash \
         curl \
         postgresql-client \
+        su-exec \
     && rm -rf /var/cache/apk/*
 
 # Install PHP extensions
@@ -75,7 +76,7 @@ COPY --from=composer /app/config ./config
 COPY --from=composer /app/database ./database
 COPY --from=composer /app/resources ./resources
 COPY --from=composer /app/routes ./routes
-COPY --from=composer /app/.env.example.docker .env.example.docker
+COPY --from=composer /app/.env.prod .env.prod
 COPY --from=composer /app/composer.json .
 COPY --from=composer /app/composer.lock .
 COPY --from=composer /app/artisan .
@@ -85,20 +86,20 @@ COPY --from=composer /app/public ./public
 COPY --from=assets /app/public/build ./public/build
 
 # Copy production config files
-COPY docker-production/nginx.conf /etc/nginx/http.d/default.conf
-COPY docker-production/php.ini /usr/local/etc/php/conf.d/production.ini
-COPY docker-production/docker-entrypoint.sh /usr/local/bin/
-COPY docker-production/worker-supervisor.sh /usr/local/bin/
+COPY docker/prod/nginx.conf /etc/nginx/http.d/default.conf
+COPY docker/prod/php.ini /usr/local/etc/php/conf.d/production.ini
+COPY docker/prod/docker-entrypoint.sh /usr/local/bin/
+COPY docker/prod/worker-supervisor.sh /usr/local/bin/
 
 # Create required Laravel directories
 RUN mkdir -p bootstrap/cache storage/framework/cache/data \
         storage/framework/sessions storage/framework/views \
         storage/logs public/build && \
-    chown -R www-data:www-data storage bootstrap/cache && \
+    # chown -R www-data:www-data storage bootstrap/cache && \
     chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/worker-supervisor.sh
 
 # Pre-warm caches (config cache will be rebuilt at runtime after .env substitution)
-RUN cp .env.example.docker .env && \
+RUN cp .env.prod .env && \
     php artisan key:generate --force && \
     php artisan config:cache && \
     php artisan route:cache && \

@@ -1,12 +1,22 @@
 #!/bin/bash
+
 set -e
+
+PUID=${PUID:-1000}
+PGID=${PGID:-1000}
+
+groupmod -o -g $PGID www-data
+usermod -o -g $PUID www-data
+addgroup www-data video || true
+addgroup www-data render || true
+chown -R www-data:www-data storage bootstrap/cache
 
 APP_DIR=/var/www/html
 cd "$APP_DIR"
-
 # Create .env from example if it doesn't exist
-if [ ! -f .env ]; then
-    cp .env.example.docker .env
+if [ ! -f .env.prod ]; then
+    echo ".env.prod missing! run cp .env.prod.example .env.prod"
+    exit 1
 fi
 
 # Handle APP_KEY — write to .env, NOT append

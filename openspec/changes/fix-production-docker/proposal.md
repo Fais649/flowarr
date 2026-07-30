@@ -22,7 +22,7 @@ The current production Docker setup builds successfully but the webapp inside th
 
 ## Impact
 
-- **New/Modified files**: `Dockerfile`, `docker-production/docker-entrypoint.sh`, `.env.example.docker`, `docker-compose.yml`
+- **New/Modified files**: `Dockerfile`, `docker/prod/docker-entrypoint.sh`, `.env.example.docker`, `docker-compose.yml`
 - **Runtime behavior**: App will actually start and respond to requests
 - **Build performance**: Faster builds due to optimized stage ordering and caching
 - **Image size**: Smaller final image (~200-300MB vs current bloated build)

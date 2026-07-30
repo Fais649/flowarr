@@ -68,11 +68,11 @@ Pull the prebuilt image from GHCR, configure environment, and start with Docker 
 
 ```bash
 # 1. Pull the compose file and env template
-curl -O https://raw.githubusercontent.com/fais/flowarr/main/docker-compose.yml
-curl -O https://raw.githubusercontent.com/fais/flowarr/main/.env.example.docker
+curl -O https://raw.githubusercontent.com/fais/flowarr/main/docker-compose.prod.yml
+curl -O https://raw.githubusercontent.com/fais/flowarr/main/.env.prod.example
 
 # 2. Configure
-cp .env.example.docker .env
+cp .env.prod.example .env
 #   Edit .env — at minimum set:
 #     APP_KEY=$(openssl rand -base64 32)
 #     DB_PASSWORD=<your-password>
@@ -119,7 +119,7 @@ services:
       - flowarr-storage:/var/www/html/storage
 ```
 
-The full compose file is at [`docker-compose.yml`](docker-compose.yml) in the repo root. Environment variables are documented in [`.env.example.docker`](.env.example.docker).
+The full compose file is at [`docker-compose.yml`](docker-compose.yml) in the repo root. Environment variables are documented in [`.env.prod.example`](.env.prod.example).
 
 #### Container details
 
@@ -136,7 +136,7 @@ On first start, PostgreSQL initializes its data directory (can take 30-60s). The
 
 Once Postgres is healthy, the Flowarr entrypoint runs in order:
 
-1. Creates `.env` from `.env.example.docker` if missing
+1. Creates `.env` from `.env.prod.example` if missing
 2. Writes `APP_KEY` from environment into `.env` (auto-generates if empty)
 3. Clears and rebuilds Laravel configuration, route, event, and view caches
 4. Runs database migrations if `RUN_MIGRATIONS=true` (default)

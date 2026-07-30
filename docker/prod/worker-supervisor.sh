@@ -35,7 +35,7 @@ start_worker() {
     # Spawn in background with restart loop
     (
         while true; do
-            php artisan queue:work --queue="$queue" --sleep=3 --tries=3 --max-time=3600 --max-jobs="$max_jobs"
+            su-exec www-data:www-data php artisan queue:work --queue="$queue" --sleep=3 --tries=3 --max-time=3600 --max-jobs="$max_jobs"
             echo "worker[$name] ($queue) exited, restarting in 2s..." >> /proc/1/fd/1 2>/dev/null || true
             sleep 2
         done
@@ -50,7 +50,7 @@ start_worker() {
 sync_workers() {
     # Get current desired workers from DB as CSV: id,queue,name,concurrency
     local desired
-    desired=$(php artisan tinker --execute '
+    desired=$(su-exec www-data:www-data php artisan tinker --execute '
         $workers = \App\Models\Worker::all();
         if ($workers->isEmpty()) {
             // Fallback: one per queue
