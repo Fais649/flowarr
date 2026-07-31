@@ -49,6 +49,12 @@ jobs:
       - name: Install Bun Dependencies
         run: bun install --frozen-lockfile
 
+      - name: Generate Wayfinder Routes
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+          php artisan wayfinder:generate
+
       - name: Run Pint
         run: composer lint:check
 
