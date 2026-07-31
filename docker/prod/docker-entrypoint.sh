@@ -10,6 +10,7 @@ usermod -o -u $PUID www-data
 addgroup www-data video || true
 addgroup www-data render || true
 chown -R www-data:www-data storage bootstrap/cache
+chown www-data:www-data /media 2>/dev/null || true
 
 APP_DIR=/var/www/html
 cd "$APP_DIR"

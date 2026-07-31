@@ -1,12 +1,14 @@
 services:
   flowarr:
     container_name: flowarr
-    image: ghcr.io/fais/flowarr:latest
+    image: ghcr.io/fais649/flowarr:latest
+    ports:
+      - "8080:8080"   # remove for Traefik-only access
     environment:
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
       APP_KEY: "${APP_KEY}"
-      APP_URL: "https://${DOMAIN:-flowarr.example.com}"
+      APP_URL: "${APP_URL:-http://localhost:8080}"
       APP_ENV: production
       APP_DEBUG: "false"
       DB_HOST: ${DB_HOST:-flowarr-postgres}
@@ -34,7 +36,6 @@ services:
     restart: unless-stopped
     networks:
       - flowarr
-      - traefik
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
@@ -85,5 +86,3 @@ volumes:
 networks:
   flowarr:
     driver: bridge
-  traefik:
-    external: true

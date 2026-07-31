@@ -4,7 +4,7 @@
 
 Media library file manipulation automation webapp. Watches filesystem directories for media files, runs configured jobs (transcoding, subtitle extraction). Designed for private media servers running *arr stacks with Jellyfin/Plex.
 
-**Stack:** Laravel 13, Inertia v3 + React 19, Tailwind v4, PostgreSQL 18, RabbitMQ, Redis, shadcn/ui.
+**Stack:** Laravel 13, Inertia v3 + React 19, Tailwind v4, PostgreSQL 18, Redis, shadcn/ui. Queues run on Laravel's database driver (`QUEUE_CONNECTION=database`); Redis is the production cache store.
 
 ---
 
@@ -14,15 +14,15 @@ Media library file manipulation automation webapp. Watches filesystem directorie
 app/
   Actions/Fortify/         — Fortify auth actions (CreateNewUser, ResetUserPassword)
   Concerns/                — Shared traits (PasswordValidationRules, ProfileValidationRules)
-  Console/Commands/        — Scheduled commands (empty, to be built)
+  Console/Commands/        — Console commands (ScanLibraries, OrchestrateQueueWorkers, CleanupStaleExecutions, AdminRecoverCommand)
   Enums/                   — (intended directory, not yet created)
   Events/                  — Event classes (empty, to be built)
   Http/
     Controllers/Settings/  — Settings controllers (ProfileController, SecurityController)
     Middleware/             — HTTP middleware (HandleAppearance, HandleInertiaRequests)
     Requests/Settings/      — Form Request validation classes
-  Jobs/                    — Queue jobs (TranscodeMediaJob, ProcessSubtitleJob, ConvertSubtitleJob)
-  Models/                  — Eloquent models: User, Library, LibraryJob, Execution
+  Jobs/                    — Queue jobs (TranscodeMediaJob, ExtractSubtitlesJob, ConvertSubtitleJob, ScanLibraryJob, OrchestrateWorkersJob)
+  Models/                  — Eloquent models: User, Library, LibraryJob, Execution, Worker, JobWorkerLimit, Setting
   Providers/               — Service providers (AppServiceProvider, FortifyServiceProvider)
   ExecutionStatus.php      — Backed enum (queued, processing, completed, stopped, paused, failed)
   LibraryJobId.php         — Backed enum (transcode_media, extract_subs, convert_sub) + job class map
@@ -35,6 +35,10 @@ resources/js/
   pages/                   — Inertia pages
     auth/                  — Login, register, forgot-password, reset-password
     settings/              — Profile, security, appearance
+    libraries/             — Libraries index, create, show
+    executions/            — Executions index, show
+    workers/               — Workers index, show
+    config/                — Scan settings
     dashboard.tsx          — Dashboard
     welcome.tsx            — Landing page
   components/              — Reusable React components
@@ -46,9 +50,11 @@ resources/js/
     breadcrumbs.tsx        — Breadcrumb navigation
     heading.tsx            — Page heading
 routes/
-  web.php                  — Inertia page routes (home, dashboard)
+  web.php                  — Web routes (home, libraries, executions, workers, jellyfin webhook)
   settings.php             — Profile/security/appearance settings routes
-  console.php              — Console command registration (inspire only)
+  config.php               — Config/scan settings routes
+  api.php                  — Playback route (not registered; see Routes section)
+  console.php              — Console command registration + scheduled scan:libraries
 ```
 
 ---
@@ -157,7 +163,7 @@ Execution created (queued)
     │
     ▼
 Queue worker picks up job
-    │ TranscodeMediaJob / ProcessSubtitleJob / ConvertSubtitleJob
+    │ TranscodeMediaJob / ExtractSubtitlesJob / ConvertSubtitleJob
     ▼
 Job runs ffmpeg/mkvmerge pipeline
     │ updates Execution status to processing → completed/failed
@@ -174,12 +180,12 @@ Jobs are dispatched based on `LibraryJobId` mapping. The enum `getJobClass()` re
 | Job | LibraryJobId | Purpose |
 |---|---|---|
 | `TranscodeMediaJob` | `transcode_media` | GPU-accelerated HDR→SDR tonemap + HEVC encode via ffmpeg |
-| `ProcessSubtitleJob` | `extract_subs` | Extract text-based subtitle streams to .srt sidecars, strip from container |
-| `ConvertSubtitleJob` | `convert_sub` | Placeholder/stub |
+| `ExtractSubtitlesJob` | `extract_subs` | Extract text-based subtitle streams to .srt sidecars, strip from container |
+| `ConvertSubtitleJob` | `convert_sub` | Convert subtitle files to .srt |
 
 ### Current State
 
-Jobs accept `string $filePath` directly (no `executionId` / DB load). They run the ffmpeg/mkvmerge pipeline and log results. Status updates to the `Execution` model are not yet implemented.
+Jobs accept `string $filePath` plus a `bool $replaceOriginal` flag and an optional `int $executionId`. Via the `TracksExecution` trait (`app/Jobs/Concerns/TracksExecution.php`) they update the `Execution` status (processing → completed/failed) when an `executionId` is set; without one the status calls are no-ops. Jobs also pause while `media_processing_paused` is set or `active_streams` > 0 in cache. `ScannerService` creates the `Execution` record, passes its id via `setExecutionId()`, and dispatches the job.
 
 ---
 
@@ -187,23 +193,27 @@ Jobs accept `string $filePath` directly (no `executionId` / DB load). They run t
 
 ### Connection
 
-RabbitMQ via `vladimir-yuldashev/laravel-queue-rabbitmq`. Configured as `QUEUE_CONNECTION=rabbitmq` in `.env`.
+Laravel's database queue driver: `QUEUE_CONNECTION=database` in `.env.example` and `docker-compose.prod.yml`. `config/queue.php` defaults to the `database` connection (`jobs` table, `retry_after` 90s) and defines per-job-type queues under `queue.queues` — `transcode`, `subtitle`, `convert-subs`, `default` — each overridable via `QUEUE_TRANSCODE`, `QUEUE_SUBTITLE`, `QUEUE_CONVERT_SUBS`, `QUEUE_DEFAULT`. Jobs select their queue in the constructor via `onQueue(...)`; `LibraryJobId::getQueue()` maps `transcode_media` → `transcode` and `extract_subs`/`convert_sub` → `subtitle`.
 
-Default queue: `RABBITMQ_QUEUE=default` (not yet mapped to per-job queues in config).
-
-### Queue Names (planned)
+### Queue Names
 
 | Queue | Purpose |
 |---|---|
-| `transcode` | GPU-intensive ffmpeg jobs |
-| `subtitle` | Lightweight subtitle extraction |
-| `default` | Everything else |
+| `orchestration` | Queue-worker pool orchestration (`OrchestrateWorkersJob`) |
+| `transcode` | GPU-intensive ffmpeg jobs (`TranscodeMediaJob`) |
+| `subtitle` | Subtitle extraction/conversion (`ExtractSubtitlesJob`, `ConvertSubtitleJob`) |
+| `convert-subs` | Configured queue with a supervisord program; no job dispatches to it yet |
+| `default` | Everything else (`ScanLibraryJob`) |
 
-Queue routing is not yet configured. Jobs use the default queue.
+Workers are supervisord programs (`docker/prod/supervisord.conf`): `orchestrator` consumes the `orchestration` queue with `--tries=1`; `Transcoder` (`transcode`), `ExtractSubs` (`subtitle`), and `ConvertSubs` (`convert-subs`) each run `--tries=3 --sleep=3 --max-time=3600` with `numprocs=10` and `autostart=false`. An `orchestrate-startup` program runs `php artisan queue:orchestrate` at container start.
+
+### Orchestration
+
+`queue:orchestrate` (`app/Console/Commands/OrchestrateQueueWorkers.php`) dispatches an `OrchestrateWorkersJob` onto the `orchestration` queue (delayed 10s). The job reads `Worker` rows (`job_type`, `enabled`, `concurrency`), maps each to a program name (`Transcoder`, `ExtractSubs`, `ConvertSubs`), and scales processes 0–9 via `SupervisorService` (`supervisorctl start/stop <program>:<program>_NN`): starts processes up to `concurrency`, stops the rest. `WorkerObserver` re-dispatches the job on worker create/update/delete, so the pool resizes on configuration changes.
 
 ### Retry + Failure
 
-Not yet configured. Jobs throw `RuntimeException` on failure. No retry policy, middleware, or dead-letter handling is set up.
+Workers run with `--tries=3` (`Transcoder`, `ExtractSubs`, `ConvertSubs`) and `--tries=1` (`orchestrator`). On failure, jobs mark the `Execution` failed via `TracksExecution` and throw (`RuntimeException` in `TranscodeMediaJob`, `Exception` in `ConvertSubtitleJob`); `ExtractSubtitlesJob` catches failures internally, marks the Execution failed, and logs without rethrowing. Failed jobs are recorded in the `failed_jobs` table (`QUEUE_FAILED_DRIVER=database-uuids`).
 
 ---
 
@@ -211,23 +221,27 @@ Not yet configured. Jobs throw `RuntimeException` on failure. No retry policy, m
 
 ### TranscodeMediaJob (`app/Jobs/TranscodeMediaJob.php`)
 
-- Accepts `string $filePath`
-- Runs ffmpeg with `hevc_nvenc` encoder, HDR→SDR tonemap pipeline (`zscale`), audio copy
-- Output: `{filepath}HEVC{ext}` (e.g., `video.mkvHEVC.mkv`)
-- Timeout: 3600s
+- Accepts `string $filePath`, `bool $replaceOriginal`, optional `int $executionId`; routed to the `transcode` queue
+- Runs ffmpeg with `hevc_nvenc` encoder (or `libx265` when `services.ffmpeg.use_nvenc` is false), HDR→SDR tonemap pipeline (`zscale`), audio copy
+- Output: `_HEVC` inserted before the extension (e.g., `video.mkv` → `video_HEVC.mkv`); with `replaceOriginal` the original file is replaced
+- No in-job timeout (`setTimeout(null)`; supervisord workers cap runtime via `--max-time=3600`)
+- Updates `Execution` status (processing/completed/failed) via the `TracksExecution` trait; pauses while `media_processing_paused` is set or `active_streams` > 0
 - Logs ffmpeg output + success/failure
 
-### ProcessSubtitleJob (`app/Jobs/ProcessSubtitleJob.php`)
+### ExtractSubtitlesJob (`app/Jobs/ExtractSubtitlesJob.php`)
 
-- Accepts `string $filePath`
+- Formerly `ProcessSubtitleJob`; accepts `string $filePath`, `bool $replaceOriginal`, optional `int $executionId`; routed to the `subtitle` queue
 - Probes with ffprobe for subtitle streams
-- Extracts text-based codecs (srt, ass, ssa, webvtt, subrip) to `.srt` sidecar files with language-coded filenames
-- Strips all internal subtitles from container via `mkvmerge -S`
+- Extracts text-based codecs (subrip, srt, ass, ssa, webvtt) to `.srt` sidecar files with language-coded filenames
+- Strips all internal subtitles from container via `mkvmerge -S` when `replaceOriginal` is true
 - Uses `config('languages.php')` for ISO 639-2 → 639-1 mapping
+- Updates `Execution` status via the `TracksExecution` trait; pauses while streams are active
 
 ### ConvertSubtitleJob (`app/Jobs/ConvertSubtitleJob.php`)
 
-- Stub/placeholder, empty `handle()`
+- Converts subtitle files (any extension except `.srt`) to `.srt` via ffmpeg (`-c:s srt`); deletes the original when `replaceOriginal` is set
+- Accepts `string $filePath`, `bool $replaceOriginal`, optional `int $executionId`; routed to the `subtitle` queue
+- Updates `Execution` status via the `TracksExecution` trait; pauses while streams are active
 
 ---
 
@@ -235,10 +249,33 @@ Not yet configured. Jobs throw `RuntimeException` on failure. No retry policy, m
 
 ### Web (`routes/web.php`)
 
-| Method | Path | Page | Auth |
+| Method | Path | Page / Controller | Auth |
 |---|---|---|---|
-| GET | `/` | welcome | Public |
+| GET | `/` | welcome / redirect to register or dashboard | Public |
+| POST | `/webhooks/jellyfin` | JellyfinWebhookController | Public (optional `X-Flowarr-Token`) |
 | GET | `/dashboard` | dashboard | Auth + Verified |
+| GET | `/libraries/directories` | DirectoryController | Auth + Verified |
+| GET | `/libraries` | LibrariesController::index | Auth + Verified |
+| GET | `/libraries/create` | LibrariesController::create | Auth + Verified |
+| POST | `/libraries` | LibrariesController::store | Auth + Verified |
+| GET | `/libraries/{library}` | LibrariesController::show | Auth + Verified |
+| GET | `/libraries/{library}/edit` | LibrariesController::edit | Auth + Verified |
+| PATCH | `/libraries/{library}` | LibrariesController::update | Auth + Verified |
+| DELETE | `/libraries/{library}` | LibrariesController::destroy | Auth + Verified |
+| POST | `/libraries/{library}/scan` | LibrariesController::triggerScan | Auth + Verified |
+| POST | `/libraries/{library}/toggle-job` | LibrariesController::toggleJob | Auth + Verified |
+| POST | `/libraries/{library}/toggle-worker` | LibrariesController::toggleWorker | Auth + Verified |
+| GET | `/executions` | ExecutionsController::index | Auth + Verified |
+| GET | `/executions/{execution}` | ExecutionsController::show | Auth + Verified |
+| POST | `/executions/batch/{start,pause,resume,stop,delete}` | ExecutionsController::batch* | Auth + Verified |
+| POST | `/executions/{execution}/{retry,cancel,start,pause,resume,stop}` | ExecutionsController::* | Auth + Verified |
+| DELETE | `/executions/{execution}` | ExecutionsController::destroy | Auth + Verified |
+| GET | `/workers` | WorkersController::index | Auth + Verified |
+| GET | `/workers/{worker}` | WorkersController::show | Auth + Verified |
+| PATCH | `/workers/{worker}` | WorkersController::update | Auth + Verified |
+| POST | `/workers/{start-all,pause-all,resume-all,stop-all}` | WorkersController::*All | Auth + Verified |
+| POST | `/workers/{worker}/{start,pause,resume,stop}` | WorkersController::* | Auth + Verified |
+| POST | `/debug/restore-test-data` | DebugController | Local only |
 
 ### Settings (`routes/settings.php`)
 
@@ -253,9 +290,24 @@ Not yet configured. Jobs throw `RuntimeException` on failure. No retry policy, m
 | GET | `/settings/appearance` | Inertia page | Auth+Verified |
 | GET | `/.well-known/passkey-endpoints` | JSON response | Public |
 
+### Config (`routes/config.php`)
+
+| Method | Path | Controller | Auth |
+|---|---|---|---|
+| GET | `/config/scan` | ScanSettingsController::edit | Auth + Verified |
+| POST | `/config/scan` | ScanSettingsController::update | Auth + Verified |
+
+### API (`routes/api.php`)
+
+| Method | Path | Controller | Auth |
+|---|---|---|---|
+| POST | `/playback` | PlaybackController | — |
+
+Note: `routes/api.php` exists on disk but is not registered — `bootstrap/app.php` `withRouting()` only loads `web.php`, `console.php`, and the `/up` health route. The `/playback` route is therefore not active.
+
 ### Console (`routes/console.php`)
 
-Single `inspire` command. No scheduled tasks.
+Defines the `inspire` command and schedules `scan:libraries` every minute (`Schedule::command('scan:libraries')->everyMinute()`).
 
 ---
 
@@ -263,7 +315,7 @@ Single `inspire` command. No scheduled tasks.
 
 ### Pages
 
-Auth: login, register, forgot-password, reset-password. Settings: profile, security (passkeys + password), appearance (theme toggle). Dashboard (empty shell). Welcome (landing).
+Auth: login, register, forgot-password, reset-password. Settings: profile, security (passkeys + password), appearance (theme toggle). Libraries: index, create, show. Executions: index, show. Workers: index, show. Config: scan settings. Dashboard. Welcome (landing).
 
 Inertia shared data: `name` (app name), `auth.user`, `sidebarOpen` (persisted toggle).
 
@@ -280,27 +332,27 @@ Auth: passkey-register, passkey-verify, passkey-item, manage-passkeys, password-
 ## Implementation Plan (Upcoming)
 
 ### Phase 1: Job ↔ Execution Integration
-- Jobs load `Execution` via `executionId` instead of raw `filePath`
-- Jobs update Execution status/progress/message during run
-- Create dedicated queue routing (transcode, subtitle queues)
-- Add `Worker` model + registration
+- Jobs load `Execution` via `executionId` instead of raw `filePath` — (done)
+- Jobs update Execution status/progress/message during run — (done, status updates only via `TracksExecution`; no progress/message)
+- Create dedicated queue routing (transcode, subtitle queues) — (done)
+- Add `Worker` model + registration — (done)
 
 ### Phase 2: Scanner Service
-- Build `ScannerService` to walk libraries, create executions for new/changed files
-- Scheduled `ScanLibraries` command
-- File dedup via checksum or mtime+size
+- Build `ScannerService` to walk libraries, create executions for new/changed files — (done)
+- Scheduled `ScanLibraries` command — (done)
+- File dedup via checksum or mtime+size — (done via existing-Execution lookup; not checksum/mtime)
 
 ### Phase 3: API + CRUD
 - API controllers for libraries, library jobs, executions
-- Inertia management pages for each entity
-- Form request validation
+- Inertia management pages for each entity — (done)
+- Form request validation — (done)
 
 ### Phase 4: Worker Management
 - Worker heartbeat + capability detection
-- Queue middleware (pause-on-stream, schedule windows)
-- Worker status dashboard
+- Queue middleware (pause-on-stream, schedule windows) — (done for pause-on-stream, via in-job `shouldPause()` checks + `Queue::pause()/resume()`; no queue middleware or schedule windows)
+- Worker status dashboard — (done)
 
 ### Phase 5: Integrations
-- Media server session monitoring (Jellyfin/Plex/Emby)
+- Media server session monitoring (Jellyfin/Plex/Emby) — (done for Jellyfin, via webhook; no Plex/Emby)
 - Post-process notifications
-- Stream-aware pause/resume
+- Stream-aware pause/resume — (done)

@@ -9,8 +9,8 @@
     <a href="#contributing">Contributing</a>
   </p>
   <p>
-    <a href="https://github.com/fais/flowarr/actions"><img src="https://github.com/fais/flowarr/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
-    <a href="https://github.com/fais/flowarr/pkgs/container/flowarr"><img src="https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker" alt="Docker"></a>
+    <a href="https://github.com/fais649/flowarr/actions"><img src="https://github.com/fais649/flowarr/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
+    <a href="https://github.com/fais649/flowarr/pkgs/container/flowarr"><img src="https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker" alt="Docker"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   </p>
 </div>
@@ -67,22 +67,31 @@ Pull the prebuilt image from GHCR, configure environment, and start with Docker 
 
 ```bash
 # 1. Pull the compose file and env template
-curl -O https://raw.githubusercontent.com/fais/flowarr/main/docker-compose.prod.yml
-curl -O https://raw.githubusercontent.com/fais/flowarr/main/.env.prod.example
+curl -O https://raw.githubusercontent.com/fais649/flowarr/main/docker-compose.prod.yml
+curl -O https://raw.githubusercontent.com/fais649/flowarr/main/.env.prod.example
 
 # 2. Configure
-cp .env.prod.example .env
-#   Edit .env — at minimum set:
+cp .env.prod.example .env.prod
+#   Edit .env.prod — at minimum set:
 #     APP_KEY=$(openssl rand -base64 32)
 #     DB_PASSWORD=<your-password>
-#     DOMAIN=<your-domain>         # only needed with Traefik
-#     APP_URL=https://<your-domain>
+#     DOMAIN=<your-domain>          # only needed with Traefik
+#     APP_URL=https://<your-domain> # only needed with Traefik
 
 # 3. Start
-docker compose up -d
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
 ```
 
-Visit `https://<your-domain>/register` (or `http://localhost:8080` without Traefik) to create the first user.
+`.env.prod` serves double duty: it feeds Compose variable substitution via `--env-file`, and it's bind-mounted into the container (`./.env.prod:/var/www/html/.env.prod`) as the app's own config.
+
+Visit `http://localhost:8080/register` (direct access) or `https://<your-domain>/register` (with Traefik) to create the first user.
+
+> **Build from source instead of pulling:** `:latest` only exists after a release tag is published — pushes to `main` publish `:edge`. Until then, build locally:
+>
+> ```bash
+> git clone https://github.com/Fais649/flowarr && cd flowarr && docker build -t ghcr.io/fais649/flowarr:latest .
+> docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+> ```
 
 #### Compose reference
 
@@ -105,7 +114,7 @@ services:
       test: ["CMD", "redis-cli", "ping"]
 
   flowarr:
-    image: ghcr.io/fais/flowarr:latest
+    image: ghcr.io/fais649/flowarr:latest
     ports:
       - "8080:8080"   # remove for Traefik-only access
     environment:
@@ -122,7 +131,7 @@ The production compose file is at [`docker-compose.prod.yml`](docker-compose.pro
 
 #### Container details
 
-The Docker image (`ghcr.io/fais/flowarr:latest`) is a single Alpine-based container running both nginx and PHP-FPM.
+The Docker image (`ghcr.io/fais649/flowarr:latest`) is a single Alpine-based container where supervisord manages nginx, PHP-FPM, and the queue worker processes.
 
 - **Port**: 8080 (internal), FastCGI proxy to `127.0.0.1:9000`
 - **PHP**: 8.5, extensions: pgsql, pdo_pgsql, bcmath, zip, intl, pcntl, redis
@@ -135,35 +144,39 @@ On first start, PostgreSQL initializes its data directory (can take 30-60s). The
 
 Once Postgres is healthy, the Flowarr entrypoint runs in order:
 
-1. Creates `.env` from `.env.prod.example` if missing
-2. Writes `APP_KEY` from environment into `.env` (auto-generates if empty)
-3. Clears and rebuilds Laravel configuration, route, event, and view caches
+1. Requires `.env.prod` to be mounted at `/var/www/html/.env.prod` — if it's absent, the container exits with an error message (no `.env` is auto-created)
+2. Copies `.env.prod` to `.env`
+3. Clears the Laravel configuration, route, event, and view caches
 4. Runs database migrations if `RUN_MIGRATIONS=true` (default)
-5. Starts PHP-FPM in background, then nginx in foreground
+5. Rebuilds the configuration, route, event, and view caches
+6. Starts supervisord, which runs PHP-FPM, nginx, the orchestration queue worker (`queue:work --queue=orchestration`), and a one-shot `queue:orchestrate` startup job
 
-No manual artisan commands required.
+The transcode, subtitle-extraction, and subtitle-conversion worker pools (10 processes each) are defined with `autostart=false` and are started on demand by the orchestrator. No manual artisan commands required.
 
 #### APP_KEY persistence
 
-If `APP_KEY` is not set in the environment, one is auto-generated on first start (logged as a warning). **Sessions will be lost on restart** unless you capture the generated key and set it in your `.env`. For permanent deployments, generate one explicitly:
+`APP_KEY` is **required** — it is never auto-generated. If it's missing or empty, the app cannot encrypt sessions, cookies, or other encrypted data. Generate one and set it in your `.env.prod`:
 
 ```bash
 openssl rand -base64 32
 # → SaN+R05iCUuA64GtMh579p/MdA5giQLJw1q8wYQ3oB8=
-# Set APP_KEY=base64:SaN+R05iCUuA64GtMh579p/MdA5giQLJw1q8wYQ3oB8= in .env
+# Set APP_KEY=base64:SaN+R05iCUuA64GtMh579p/MdA5giQLJw1q8wYQ3oB8= in .env.prod
 ```
 
 #### Traefik reverse proxy
 
-The compose file includes Traefik v2/v3 discovery labels. To use them:
+The compose file includes Traefik v2/v3 discovery labels. To use them, run the stack with the `docker-compose.traefik.yml` override, which attaches the flowarr container to the external `traefik` network:
 
-1. Make sure Traefik is running with an `traefik` Docker network: `docker network create traefik`
-2. Set `DOMAIN` in `.env` — this becomes the `Host()` rule
+1. Make sure Traefik is running with an `traefik` Docker network: `docker network create traefik` (if absent)
+2. Set `DOMAIN` in `.env.prod` — this becomes the `Host()` rule
 3. Set `APP_URL` to `https://<your-domain>`
-4. Remove the `ports:` block from the compose file (Traefik routes internally)
-5. Start the stack: `docker compose up -d`
+4. Optionally remove the `ports:` mapping (Traefik routes internally)
+5. Start the stack:
+   ```bash
+   docker compose --env-file .env.prod -f docker-compose.prod.yml -f docker-compose.traefik.yml up -d
+   ```
 
-Labels are pre-configured for TLS on the `websecure` entrypoint. The container joins both the `flowarr` internal network and the `traefik` external network.
+Labels are pre-configured for TLS on the `websecure` entrypoint. The base compose file keeps the flowarr container on the `flowarr` internal network; the override additionally attaches it to the external `traefik` network.
 
 #### Directory layout (container)
 
@@ -185,7 +198,7 @@ volumes:
 ### Development (Laravel Sail)
 
 ```bash
-git clone https://github.com/fais/flowarr
+git clone https://github.com/fais649/flowarr
 cd flowarr
 cp .env.example .env
 ./vendor/bin/sail up -d

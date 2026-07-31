@@ -1,0 +1,8 @@
+services:
+  flowarr:
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
