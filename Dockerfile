@@ -1,23 +1,18 @@
-# Stage 1: Composer dependencies + Wayfinder types
 FROM composer:2 AS composer
 WORKDIR /app
 
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
 
-# Copy app source to generate wayfinder types
 COPY . .
-# Create minimal .env so artisan can bootstrap, then run scripts and generate wayfinder types
 RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php && \
     cp .env.prod.example .env && \
     php artisan key:generate --force && \
     php artisan wayfinder:generate --with-form
 
-# Stage 2: Frontend assets
 FROM oven/bun:1 AS assets
 WORKDIR /app
 
-# Wayfinder types are pre-generated in composer stage — skip PHP call during build
 ENV SKIP_WAYFINDER=true
 
 COPY package.json bun.lock ./
@@ -32,32 +27,31 @@ COPY public/ ./public/
 
 RUN bun run build
 
-# Stage 3: Runtime image
-FROM php:8.5-fpm-alpine AS runtime
+FROM php:8.5-fpm-bookworm AS runtime
 WORKDIR /var/www/html
 
-# Install system dependencies
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
         nginx \
-        ffmpeg \
         mkvtoolnix \
         bash \
         curl \
         postgresql-client \
-        su-exec \
-        shadow \
+        gosu \
         supervisor \
-    && rm -rf /var/cache/apk/*
-
-# Install PHP extensions
-RUN apk add --no-cache --virtual .php-ext-deps \
-        linux-headers \
-        autoconf \
-        g++ \
-        make \
-        postgresql-dev \
+        ca-certificates \
+        gnupg \
+        libpq-dev \
         libzip-dev \
-    && docker-php-ext-install -j"$(nproc)" \
+        libicu-dev \
+    && curl -fsSL https://repo.jellyfin.org/jellyfin_team.gpg.key | gpg --dearmor -o /etc/apt/trusted.gpg.d/jellyfin.gpg \
+    && echo "deb [arch=amd64] https://repo.jellyfin.org/debian bookworm main" > /etc/apt/sources.list.d/jellyfin.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends jellyfin-ffmpeg7 \
+    && ln -s /usr/lib/jellyfin-ffmpeg/ffmpeg /usr/local/bin/ffmpeg \
+    && ln -s /usr/lib/jellyfin-ffmpeg/ffprobe /usr/local/bin/ffprobe \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN docker-php-ext-install -j"$(nproc)" \
         pgsql \
         pdo_pgsql \
         bcmath \
@@ -65,12 +59,8 @@ RUN apk add --no-cache --virtual .php-ext-deps \
         intl \
         pcntl \
     && pecl install redis \
-    && docker-php-ext-enable redis \
-    && apk del .php-ext-deps \
-    && apk add --no-cache libzip \
-    && rm -rf /tmp/pear
+    && docker-php-ext-enable redis
 
-# Copy application from composer stage
 COPY --from=composer /app/vendor ./vendor
 COPY --from=composer /app/app ./app
 COPY --from=composer /app/bootstrap ./bootstrap
@@ -84,22 +74,18 @@ COPY --from=composer /app/composer.lock .
 COPY --from=composer /app/artisan .
 COPY --from=composer /app/public ./public
 
-# Overlay built assets from assets stage
 COPY --from=assets /app/public/build ./public/build
 
-# Copy production config files
 COPY docker/prod/nginx.conf /etc/nginx/nginx.conf
 COPY docker/prod/php.ini /usr/local/etc/php/conf.d/production.ini
 COPY docker/prod/docker-entrypoint.sh /usr/local/bin/
 COPY docker/prod/supervisord.conf /etc/supervisord.conf
 
-# Create required Laravel directories
 RUN mkdir -p bootstrap/cache storage/framework/cache/data \
         storage/framework/sessions storage/framework/views \
         storage/logs public/build /var/log/supervisor && \
     chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Pre-warm caches (config cache will be rebuilt at runtime after .env substitution)
 RUN cp .env.prod.example .env && \
     php artisan key:generate --force && \
     php artisan config:cache && \
