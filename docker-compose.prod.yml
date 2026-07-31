@@ -24,6 +24,17 @@ services:
       SESSION_DRIVER: database
       CACHE_STORE: redis
       APP_NAME: ${APP_NAME:-Flowarr}
+    # Intel/AMD VAAPI passthrough:
+    devices:
+      - /dev/dri:/dev/dri
+    # Nvidia passthrough (use instead of devices if on Nvidia):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu, video, utility]
     volumes:
       - ${MEDIA_PATH:-./media}:/media
       - flowarr-storage:/var/www/html/storage

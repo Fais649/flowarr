@@ -18,16 +18,17 @@ services:
             XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
             XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
             IGNITION_LOCAL_SITES_PATH: '${PWD}'
+        #AMD/Intel ONLY:
         devices:
-            - "/dev/dri:/dev/dri"
-       # 2. NVIDIA Passthrough (Requires NVIDIA Container Toolkit on Host)
-        deploy:
-            resources:
-                reservations:
-                    devices:
-                        - driver: nvidia
-                          count: 1
-                          capabilities: [gpu, video, utility]
+          - /dev/dri:/dev/dri
+        # Nvidia passthrough (use instead of devices if on Nvidia):
+        # deploy:
+        #   resources:
+        #     reservations:
+        #       devices:
+        #         - driver: nvidia
+        #           count: all
+        #           capabilities: [gpu, video, utility]
         volumes:
             - '.:/var/www/html'
             # test-media/ is gitignored; regenerate it with bin/generate-test-media.sh
