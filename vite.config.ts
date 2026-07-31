@@ -29,7 +29,7 @@ export default defineConfig({
             formVariants: true,
             command: process.env.SKIP_WAYFINDER === 'true'
                 ? 'true'
-                : 'php artisan wayfinder:generate',
+                : 'php artisan wayfinder:generate --with-form'
         }),
     ],
 });
