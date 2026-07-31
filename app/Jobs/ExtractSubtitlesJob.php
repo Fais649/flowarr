@@ -3,7 +3,8 @@
 namespace App\Jobs;
 
 use App\Jobs\Concerns\TracksExecution;
-use App\Jobs\Contracts\DispatchableJob;
+use App\Jobs\Contracts\MediaJob;
+use App\MediaJobQueue;
 use Closure;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,10 +13,12 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
-class ExtractSubtitlesJob implements DispatchableJob, ShouldQueue
+class ExtractSubtitlesJob implements MediaJob, ShouldQueue
 {
     use Queueable;
     use TracksExecution;
+
+    public MediaJobQueue $queue = MediaJobQueue::EXTRACT_SUBTITLES;
 
     private const TEXT_BASED_CODECS = [
         'subrip',
@@ -51,6 +54,7 @@ class ExtractSubtitlesJob implements DispatchableJob, ShouldQueue
 
         $factory = $this->processFactory ?? fn (array $command) => new Process($command);
 
+        $success = false;
         try {
             $probeCommand = [
                 'ffprobe',
@@ -166,17 +170,20 @@ class ExtractSubtitlesJob implements DispatchableJob, ShouldQueue
                 }
             }
 
+            $success = true;
         } catch (Exception $e) {
             $this->markExecutionAsFailed();
-            Log::error(sprintf('ExtractSubtitlesJob Exception encountered: %s', $e->getMessage()));
+            Log::error(sprintf('ExtractSubtitlesJob Exception encountered, Skipping %s: %s', $this->filePath, $e->getMessage()));
         } finally {
             if (isset($outputFile) && file_exists($outputFile)) {
                 unlink($outputFile);
             }
         }
 
-        $this->markExecutionAsCompleted();
-        Log::info(sprintf('Finished processing subtitles for %s', $this->filePath));
+        if ($success) {
+            $this->markExecutionAsCompleted();
+            Log::info(sprintf('Finished processing subtitles for %s', $this->filePath));
+        }
     }
 
     /** @phpstan-impure */

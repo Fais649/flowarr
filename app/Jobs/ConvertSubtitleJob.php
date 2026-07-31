@@ -3,7 +3,8 @@
 namespace App\Jobs;
 
 use App\Jobs\Concerns\TracksExecution;
-use App\Jobs\Contracts\DispatchableJob;
+use App\Jobs\Contracts\MediaJob;
+use App\MediaJobQueue;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -11,10 +12,12 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
-class ConvertSubtitleJob implements DispatchableJob, ShouldQueue
+class ConvertSubtitleJob implements MediaJob, ShouldQueue
 {
     use Queueable;
     use TracksExecution;
+
+    public MediaJobQueue $queue = MediaJobQueue::CONVERT_SUBTITLE;
 
     public function __construct(
         private string $filePath,

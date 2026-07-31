@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\LibraryJobId;
+use App\MediaJobQueue;
 use App\Models\Worker;
 use App\Services\SupervisorService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,6 +13,8 @@ use Illuminate\Log\Logger;
 class OrchestrateWorkersJob implements ShouldQueue
 {
     use Queueable;
+
+    public MediaJobQueue $queue = MediaJobQueue::ORCHESTRATE;
 
     private const MAX_PROCS = 10;
 
