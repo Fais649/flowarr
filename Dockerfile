@@ -11,7 +11,7 @@ COPY . .
 RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php && \
     cp .env.prod.example .env && \
     php artisan key:generate --force && \
-    php artisan wayfinder:generate
+    php artisan wayfinder:generate --with-form
 
 # Stage 2: Frontend assets
 FROM oven/bun:1 AS assets
