@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Jobs\Contracts\OrchestrationJob;
+use App\Jobs\Contracts\OrchestrateJob;
 use App\LibraryJobId;
 use App\Models\Worker;
 use App\OrchestrateJobQueue;
@@ -13,7 +13,7 @@ use Illuminate\Log\Logger;
 use Illuminate\Queue\Attributes\Queue;
 
 #[Queue(queue: OrchestrateJobQueue::ORCHESTRATE_WORKERS)]
-class OrchestrateWorkersJob implements OrchestrationJob, ShouldQueue
+class OrchestrateWorkers implements OrchestrateJob, ShouldQueue
 {
     use Queueable;
 

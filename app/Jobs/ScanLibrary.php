@@ -12,7 +12,7 @@ use Illuminate\Queue\Attributes\Queue;
 use Illuminate\Support\Facades\Log;
 
 #[Queue(queue: OrchestrateJobQueue::SCAN_LIBRARIES)]
-class ScanLibraryJob implements ShouldQueue
+class ScanLibrary implements ShouldQueue
 {
     use Queueable;
 

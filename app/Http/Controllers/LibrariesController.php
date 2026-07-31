@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreLibraryRequest;
 use App\Http\Requests\UpdateLibraryRequest;
-use App\Jobs\ScanLibraryJob;
+use App\Jobs\ScanLibrary;
 use App\LibraryJobId;
 use App\LibraryStatus;
 use App\Models\Execution;
@@ -48,7 +48,7 @@ class LibrariesController extends Controller
             'status' => LibraryStatus::PENDING_SCAN,
         ]);
 
-        dispatch(new ScanLibraryJob($library->id));
+        dispatch(new ScanLibrary($library->id));
 
         return redirect()->route('libraries.show', $library);
     }
@@ -105,7 +105,7 @@ class LibrariesController extends Controller
 
     public function triggerScan(Library $library): RedirectResponse
     {
-        dispatch(new ScanLibraryJob($library->id));
+        dispatch(new ScanLibrary($library->id));
         $library->update(['status' => LibraryStatus::PENDING_SCAN]);
 
         return redirect()->route('libraries.show', $library);

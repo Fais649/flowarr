@@ -1,6 +1,6 @@
 <?php
 
-use App\Jobs\ExtractSubtitlesJob;
+use App\Jobs\ExtractSubtitles;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Process\Process;
 
@@ -47,7 +47,7 @@ it('successfully extracts subtitles using a mock process', function () {
 
     $factory = fn (array $command) => $mock;
 
-    $job = new ExtractSubtitlesJob($this->videoFile, true, $factory);
+    $job = new ExtractSubtitles($this->videoFile, true, $factory);
     $job->handle();
 
     expect(true)->toBeTrue();
@@ -59,7 +59,7 @@ it('extracts embedded subtitles to sidecar files', function () {
         $this->markTestSkipped('mkvmerge is not available.');
     }
 
-    $job = new ExtractSubtitlesJob($this->videoFile);
+    $job = new ExtractSubtitles($this->videoFile);
     $job->handle();
 
     expect($this->subtitleFile)->toBeFile();
@@ -81,7 +81,7 @@ it('strips internal subtitle tracks from mkv after extraction', function () {
     $streamsBefore = json_decode($probeBefore->getOutput(), true);
     $hasSubBefore = collect($streamsBefore['streams'] ?? [])->contains(fn ($s) => str_contains($s['codec_name'] ?? '', 'sub'));
 
-    $job = new ExtractSubtitlesJob($this->videoFile, true);
+    $job = new ExtractSubtitles($this->videoFile, true);
     $job->handle();
 
     $probeAfter = new Process(['ffprobe', '-v', 'error', '-select_streams', 's', '-show_entries', 'stream=codec_name', '-of', 'json', $this->videoFile]);

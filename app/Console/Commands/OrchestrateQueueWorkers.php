@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\OrchestrateWorkersJob;
+use App\Jobs\OrchestrateWorkers;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -13,7 +13,7 @@ class OrchestrateQueueWorkers extends Command
 {
     public function handle(): void
     {
-        OrchestrateWorkersJob::dispatch()->delay(now()->addSeconds(10));
+        OrchestrateWorkers::dispatch()->delay(now()->addSeconds(10));
         $this->info('OrchestrateWorkersJob dispatched');
     }
 }

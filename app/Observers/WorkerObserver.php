@@ -2,7 +2,7 @@
 
 namespace App\Observers;
 
-use App\Jobs\OrchestrateWorkersJob;
+use App\Jobs\OrchestrateWorkers;
 use App\Models\Worker;
 
 class WorkerObserver
@@ -10,17 +10,17 @@ class WorkerObserver
     public function updated(Worker $worker): void
     {
         if ($worker->wasChanged('concurrency', 'enabled')) {
-            OrchestrateWorkersJob::dispatch($worker);
+            OrchestrateWorkers::dispatch($worker);
         }
     }
 
     public function deleted(Worker $worker): void
     {
-        OrchestrateWorkersJob::dispatch($worker);
+        OrchestrateWorkers::dispatch($worker);
     }
 
     public function created(Worker $worker): void
     {
-        OrchestrateWorkersJob::dispatch($worker);
+        OrchestrateWorkers::dispatch($worker);
     }
 }

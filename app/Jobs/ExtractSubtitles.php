@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
 #[Queue(queue: MediaJobQueue::EXTRACT_SUBTITLES)]
-class ExtractSubtitlesJob implements DispatchableJob, ShouldQueue
+class ExtractSubtitles implements DispatchableJob, ShouldQueue
 {
     use Queueable;
     use TracksExecution;

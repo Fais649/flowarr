@@ -3,9 +3,9 @@
 namespace App;
 
 use App\Jobs\Contracts\DispatchableJob;
-use App\Jobs\ConvertSubtitleJob;
-use App\Jobs\ExtractSubtitlesJob;
-use App\Jobs\TranscodeMediaJob;
+use App\Jobs\ConvertSubtitle;
+use App\Jobs\ExtractSubtitles;
+use App\Jobs\TranscodeMedia;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
 enum LibraryJobId: string
@@ -20,9 +20,9 @@ enum LibraryJobId: string
     public function getJobClass(): string
     {
         return match ($this) {
-            self::TRANSCODE_MEDIA => TranscodeMediaJob::class,
-            self::EXTRACT_SUBTITLES => ExtractSubtitlesJob::class,
-            self::CONVERT_SUBTITLE => ConvertSubtitleJob::class,
+            self::TRANSCODE_MEDIA => TranscodeMedia::class,
+            self::EXTRACT_SUBTITLES => ExtractSubtitles::class,
+            self::CONVERT_SUBTITLE => ConvertSubtitle::class,
         };
     }
 }

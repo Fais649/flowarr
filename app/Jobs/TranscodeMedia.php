@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
 #[Queue(queue: MediaJobQueue::TRANSCODE_MEDIA)]
-class TranscodeMediaJob implements DispatchableJob, ShouldQueue
+class TranscodeMedia implements DispatchableJob, ShouldQueue
 {
     use Queueable;
     use TracksExecution;

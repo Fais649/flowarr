@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
 #[Queue(queue: MediaJobQueue::CONVERT_SUBTITLE)]
-class ConvertSubtitleJob implements DispatchableJob, ShouldQueue
+class ConvertSubtitle implements DispatchableJob, ShouldQueue
 {
     use Queueable;
     use TracksExecution;

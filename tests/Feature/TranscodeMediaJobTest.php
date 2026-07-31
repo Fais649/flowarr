@@ -1,7 +1,7 @@
 <?php
 
 use App\ExecutionStatus;
-use App\Jobs\TranscodeMediaJob;
+use App\Jobs\TranscodeMedia;
 use App\Models\Execution;
 use App\Models\Library;
 use Illuminate\Support\Facades\Cache;
@@ -46,7 +46,7 @@ it('successfully transcodes the generated mkv file using a mock process', functi
     $processMock->shouldReceive('isSuccessful')->andReturn(true);
     $processMock->shouldReceive('getErrorOutput')->andReturn('');
 
-    $job = new TranscodeMediaJob($this->sourceFile, false, $processMock);
+    $job = new TranscodeMedia($this->sourceFile, false, $processMock);
     $job->handle();
 
     expect(true)->toBeTrue();
@@ -55,7 +55,7 @@ it('successfully transcodes the generated mkv file using a mock process', functi
 it('pauses when media_processing_paused is set', function () {
     Cache::put('media_processing_paused', true);
 
-    $shouldPause = (fn () => $this->shouldPause())->bindTo(new TranscodeMediaJob($this->sourceFile), TranscodeMediaJob::class);
+    $shouldPause = (fn () => $this->shouldPause())->bindTo(new TranscodeMedia($this->sourceFile), TranscodeMedia::class);
 
     expect($shouldPause())->toBeTrue();
 })->group('pause');
@@ -63,13 +63,13 @@ it('pauses when media_processing_paused is set', function () {
 it('pauses when active_streams is greater than zero', function () {
     Cache::put('active_streams', 2);
 
-    $shouldPause = (fn () => $this->shouldPause())->bindTo(new TranscodeMediaJob($this->sourceFile), TranscodeMediaJob::class);
+    $shouldPause = (fn () => $this->shouldPause())->bindTo(new TranscodeMedia($this->sourceFile), TranscodeMedia::class);
 
     expect($shouldPause())->toBeTrue();
 })->group('pause');
 
 it('does not pause when no conditions are set', function () {
-    $shouldPause = (fn () => $this->shouldPause())->bindTo(new TranscodeMediaJob($this->sourceFile), TranscodeMediaJob::class);
+    $shouldPause = (fn () => $this->shouldPause())->bindTo(new TranscodeMedia($this->sourceFile), TranscodeMedia::class);
 
     expect($shouldPause())->toBeFalse();
 })->group('pause');
@@ -80,7 +80,7 @@ it('transcodes using real ffmpeg with software codec for testing compatibility',
         'services.ffmpeg.video_filter' => 'format=yuv420p',
     ]);
 
-    $job = new TranscodeMediaJob($this->sourceFile);
+    $job = new TranscodeMedia($this->sourceFile);
 
     try {
         $job->handle();
@@ -118,7 +118,7 @@ it('updates execution status when executionId is provided', function () {
     $processMock->shouldReceive('isSuccessful')->andReturn(true);
     $processMock->shouldReceive('getErrorOutput')->andReturn('');
 
-    $job = new TranscodeMediaJob($this->sourceFile, false, $processMock);
+    $job = new TranscodeMedia($this->sourceFile, false, $processMock);
     $job->setExecutionId($execution->id);
     $job->handle();
 
