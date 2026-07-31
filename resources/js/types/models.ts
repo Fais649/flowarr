@@ -10,7 +10,6 @@ export type Worker = {
     updated_at: string;
 };
 
-
 export type Library = {
     id: number;
     base_path: string;

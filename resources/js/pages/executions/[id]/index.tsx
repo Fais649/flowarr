@@ -1,9 +1,16 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { ArrowLeft, RotateCcw, XCircle } from 'lucide-react';
+import {
+    cancel,
+    retry,
+} from '@/actions/App/Http/Controllers/ExecutionsController';
+import { DateText } from '@/components/date-text';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
+import { dashboard } from '@/routes';
+import { index } from '@/routes/executions';
 
 type Execution = {
     id: number;
@@ -25,20 +32,19 @@ export default function ExecutionDetail({
 }) {
     const handleRetry = () => {
         if (!confirm('Retry this execution?')) {
-return;
-}
+            return;
+        }
 
-        router.post(`/executions/${execution.id}/retry`);
+        router.post(retry.url({ execution: execution.id }));
     };
 
     const handleCancel = () => {
         if (!confirm('Cancel this execution?')) {
-return;
-}
+            return;
+        }
 
-        router.post(`/executions/${execution.id}/cancel`);
+        router.post(cancel.url({ execution: execution.id }));
     };
-
 
     return (
         <>
@@ -46,7 +52,7 @@ return;
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href="/executions">
+                        <Link href={index()}>
                             <ArrowLeft className="size-4" />
                         </Link>
                     </Button>
@@ -109,9 +115,7 @@ return;
                                     Created
                                 </span>
                                 <p className="font-medium">
-                                    {new Date(
-                                        execution.created_at,
-                                    ).toLocaleString()}
+                                    <DateText value={execution.created_at} />
                                 </p>
                             </div>
                             {execution.finished_at && (
@@ -120,9 +124,9 @@ return;
                                         Finished
                                     </span>
                                     <p className="font-medium">
-                                        {new Date(
-                                            execution.finished_at,
-                                        ).toLocaleString()}
+                                        <DateText
+                                            value={execution.finished_at}
+                                        />
                                     </p>
                                 </div>
                             )}
@@ -137,8 +141,8 @@ return;
 ExecutionDetail.layout = (page: React.ReactNode) => (
     <AppLayout
         breadcrumbs={[
-            { title: 'Dashboard', href: '/dashboard' },
-            { title: 'Executions', href: '/executions' },
+            { title: 'Dashboard', href: dashboard() },
+            { title: 'Executions', href: index() },
             { title: 'Detail', href: '#' },
         ]}
     >

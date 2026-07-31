@@ -2,7 +2,6 @@ services:
   flowarr:
     container_name: flowarr
     image: ghcr.io/fais/flowarr:latest
-    build: .
     environment:
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}

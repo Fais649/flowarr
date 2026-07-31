@@ -1,12 +1,16 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { ArrowLeft, Play, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { toggleWorker } from '@/actions/App/Http/Controllers/LibrariesController';
+import {
+    destroy,
+    toggleWorker,
+    triggerScan,
+} from '@/actions/App/Http/Controllers/LibrariesController';
 import { DataTable } from '@/components/data-table';
 import type { Column } from '@/components/data-table';
+import { DateText } from '@/components/date-text';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { type Worker, type Library, type Execution, JobTypeLabels } from '@/types/models'
 import {
     Card,
     CardContent,
@@ -17,6 +21,10 @@ import {
 import { Switch } from '@/components/ui/switch';
 import AppLayout from '@/layouts/app-layout';
 import { toDateString } from '@/lib/utils';
+import { dashboard } from '@/routes';
+import { index } from '@/routes/libraries';
+import { JobTypeLabels } from '@/types/models';
+import type { Execution, Library, Worker } from '@/types/models';
 
 export default function LibraryDetail({
     library,
@@ -41,7 +49,7 @@ export default function LibraryDetail({
     };
 
     const handleScan = () => {
-        router.post(`/libraries/${library.id}/scan`);
+        router.post(triggerScan.url({ library: library.id }));
     };
 
     const handleDelete = () => {
@@ -54,7 +62,7 @@ export default function LibraryDetail({
         }
 
         setIsDeleting(true);
-        router.delete(`/libraries/${library.id}`);
+        router.delete(destroy.url({ library: library.id }));
     };
 
     const executionColumns: Column<Execution>[] = [
@@ -73,7 +81,7 @@ export default function LibraryDetail({
         {
             key: 'created_at',
             label: 'Created',
-            render: (e) => new Date(e.created_at).toLocaleString(),
+            render: (e) => <DateText value={e.created_at} />,
         },
     ];
 
@@ -83,7 +91,7 @@ export default function LibraryDetail({
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href="/libraries">
+                        <Link href={index()}>
                             <ArrowLeft className="size-4" />
                         </Link>
                     </Button>
@@ -148,8 +156,7 @@ export default function LibraryDetail({
                         <CardHeader>
                             <CardTitle>Enabled Workers</CardTitle>
                             <CardDescription>
-                                Select which workers are active for this
-                                library
+                                Select which workers are active for this library
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -175,9 +182,9 @@ export default function LibraryDetail({
                                             </span>
                                             <span className="text-xs text-muted-foreground">
                                                 {worker.job_type
-                                                    ? JobTypeLabels[
-                                                    worker.job_type
-                                                    ] ?? worker.job_type
+                                                    ? (JobTypeLabels[
+                                                          worker.job_type
+                                                      ] ?? worker.job_type)
                                                     : '-'}
                                             </span>
                                         </div>
@@ -217,8 +224,8 @@ export default function LibraryDetail({
 LibraryDetail.layout = (page: React.ReactNode) => (
     <AppLayout
         breadcrumbs={[
-            { title: 'Dashboard', href: '/dashboard' },
-            { title: 'Libraries', href: '/libraries' },
+            { title: 'Dashboard', href: dashboard() },
+            { title: 'Libraries', href: index() },
             { title: 'Detail', href: '#' },
         ]}
     >

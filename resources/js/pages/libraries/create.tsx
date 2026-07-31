@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 
-export default function CreateLibrary({
+function LibraryForm({
     library,
 }: {
     library?: { id: number; base_path: string; scan_interval: number };
@@ -28,80 +28,89 @@ export default function CreateLibrary({
         }
     };
 
-
     return (
-        <>
-            <Head title={library ? 'Edit Library' : 'Create Library'} />
-            <div className="flex h-full flex-1 flex-col gap-4 p-4">
-                <h1 className="text-2xl font-bold">
-                    {library ? 'Edit Library' : 'Create Library'}
-                </h1>
-                <Card className="max-w-lg">
-                    <CardHeader>
-                        <CardTitle>Library Details</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={submit} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="base_path">Base Path</Label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        id="base_path"
-                                        value={data.base_path}
-                                        onChange={(e) =>
-                                            setData('base_path', e.target.value)
-                                        }
-                                        placeholder="/path/to/media"
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => setBrowserOpen(true)}
-                                    >
-                                        Browse
-                                    </Button>
-                                </div>
-                                {errors.base_path && (
-                                    <p className="text-sm text-destructive">
-                                        {errors.base_path}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="scan_interval">
-                                    Scan Interval (seconds)
-                                </Label>
+        <div className="flex h-full flex-1 flex-col gap-4 p-4">
+            <h1 className="text-2xl font-bold">
+                {library ? 'Edit Library' : 'Create Library'}
+            </h1>
+            <Card className="max-w-lg">
+                <CardHeader>
+                    <CardTitle>Library Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={submit} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="base_path">Base Path</Label>
+                            <div className="flex gap-2">
                                 <Input
-                                    id="scan_interval"
-                                    type="number"
-                                    value={data.scan_interval}
+                                    id="base_path"
+                                    value={data.base_path}
                                     onChange={(e) =>
-                                        setData(
-                                            'scan_interval',
-                                            Number(e.target.value),
-                                        )
+                                        setData('base_path', e.target.value)
                                     }
-                                    min={60}
+                                    placeholder="/path/to/media"
                                 />
-                                {errors.scan_interval && (
-                                    <p className="text-sm text-destructive">
-                                        {errors.scan_interval}
-                                    </p>
-                                )}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setBrowserOpen(true)}
+                                >
+                                    Browse
+                                </Button>
                             </div>
-                            <Button type="submit" disabled={processing}>
-                                {library ? 'Update Library' : 'Create Library'}
-                            </Button>
-                        </form>
-                    </CardContent>
-                </Card>
-            </div>
+                            {errors.base_path && (
+                                <p className="text-sm text-destructive">
+                                    {errors.base_path}
+                                </p>
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="scan_interval">
+                                Scan Interval (seconds)
+                            </Label>
+                            <Input
+                                id="scan_interval"
+                                type="number"
+                                value={data.scan_interval}
+                                onChange={(e) =>
+                                    setData(
+                                        'scan_interval',
+                                        Number(e.target.value),
+                                    )
+                                }
+                                min={60}
+                            />
+                            {errors.scan_interval && (
+                                <p className="text-sm text-destructive">
+                                    {errors.scan_interval}
+                                </p>
+                            )}
+                        </div>
+                        <Button type="submit" disabled={processing}>
+                            {library ? 'Update Library' : 'Create Library'}
+                        </Button>
+                    </form>
+                </CardContent>
+            </Card>
 
             <DirectoryBrowser
                 open={browserOpen}
                 onOpenChange={setBrowserOpen}
                 onSelect={(path) => setData('base_path', path)}
             />
+        </div>
+    );
+}
+
+export default function CreateLibrary({
+    library,
+}: {
+    library?: { id: number; base_path: string; scan_interval: number };
+}) {
+    return (
+        <>
+            <Head title={library ? 'Edit Library' : 'Create Library'} />
+            <LibraryForm key={library?.id ?? 'new'} library={library} />
         </>
     );
 }

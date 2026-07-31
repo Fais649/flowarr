@@ -1,16 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { Info } from 'lucide-react';
 import { update } from '@/actions/App/Http/Controllers/WorkersController';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { type Worker, JobTypeLabels } from '@/types/models';
 import {
     Card,
     CardContent,
@@ -18,10 +8,25 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import AppLayout from '@/layouts/app-layout';
+import { dashboard } from '@/routes';
+import { index } from '@/routes/workers';
+import { JobTypeLabels } from '@/types/models';
+import type { Worker } from '@/types/models';
 
-function getTooltipText(jobType: string | null | undefined, setting: 'enabled' | 'concurrency' | 'replace_original'): string {
-    const jobLabel = jobType ? JobTypeLabels[jobType] ?? jobType : 'worker';
+function getTooltipText(
+    jobType: string | null | undefined,
+    setting: 'enabled' | 'concurrency' | 'replace_original',
+): string {
+    const jobLabel = jobType ? (JobTypeLabels[jobType] ?? jobType) : 'worker';
 
     const tooltips = {
         transcode_media: {
@@ -55,16 +60,17 @@ function getTooltipText(jobType: string | null | undefined, setting: 'enabled' |
 }
 
 export default function WorkersIndex({ workers }: { workers: Worker[] }) {
-    const handleUpdate = (worker: Worker, data: Record<string, unknown>) => {
-        router.patch(
-            update.url({ worker: worker.id }),
-            data,
-            { preserveScroll: true },
-        );
+    const handleUpdate = (
+        worker: Worker,
+        data: Record<string, string | number | boolean>,
+    ) => {
+        router.patch(update.url({ worker: worker.id }), data, {
+            preserveScroll: true,
+        });
     };
 
     return (
-        <TooltipProvider>
+        <>
             <Head title="Workers" />
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <h1 className="text-2xl font-bold">Workers</h1>
@@ -76,22 +82,28 @@ export default function WorkersIndex({ workers }: { workers: Worker[] }) {
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-base">
                                         {worker.job_type
-                                            ? JobTypeLabels[worker.job_type] ?? worker.job_type
+                                            ? (JobTypeLabels[worker.job_type] ??
+                                              worker.job_type)
                                             : worker.name}
                                     </CardTitle>
                                     <div className="flex items-center gap-2">
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <Info className="size-4 text-muted-foreground cursor-help" />
+                                                <Info className="size-4 cursor-help text-muted-foreground" />
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                                {getTooltipText(worker.job_type, 'enabled')}
+                                                {getTooltipText(
+                                                    worker.job_type,
+                                                    'enabled',
+                                                )}
                                             </TooltipContent>
                                         </Tooltip>
                                         <Switch
                                             checked={worker.enabled}
                                             onCheckedChange={(checked) =>
-                                                handleUpdate(worker, { enabled: checked })
+                                                handleUpdate(worker, {
+                                                    enabled: checked,
+                                                })
                                             }
                                         />
                                     </div>
@@ -108,10 +120,13 @@ export default function WorkersIndex({ workers }: { workers: Worker[] }) {
                                         </Label>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <Info className="size-3 text-muted-foreground cursor-help" />
+                                                <Info className="size-3 cursor-help text-muted-foreground" />
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                                {getTooltipText(worker.job_type, 'concurrency')}
+                                                {getTooltipText(
+                                                    worker.job_type,
+                                                    'concurrency',
+                                                )}
                                             </TooltipContent>
                                         </Tooltip>
                                     </div>
@@ -123,12 +138,15 @@ export default function WorkersIndex({ workers }: { workers: Worker[] }) {
                                         disabled={!worker.enabled}
                                         onBlur={(e) => {
                                             const val = Number(e.target.value);
+
                                             if (
                                                 val >= 1 &&
                                                 val <= 99 &&
                                                 val !== worker.concurrency
                                             ) {
-                                                handleUpdate(worker, { concurrency: val });
+                                                handleUpdate(worker, {
+                                                    concurrency: val,
+                                                });
                                             }
                                         }}
                                     />
@@ -137,16 +155,19 @@ export default function WorkersIndex({ workers }: { workers: Worker[] }) {
                                     <div className="flex items-center gap-2">
                                         <Label
                                             htmlFor={`replace-${worker.id}`}
-                                            className="text-xs text-muted-foreground cursor-pointer"
+                                            className="cursor-pointer text-xs text-muted-foreground"
                                         >
                                             Replace Original
                                         </Label>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <Info className="size-3 text-muted-foreground cursor-help" />
+                                                <Info className="size-3 cursor-help text-muted-foreground" />
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                                {getTooltipText(worker.job_type, 'replace_original')}
+                                                {getTooltipText(
+                                                    worker.job_type,
+                                                    'replace_original',
+                                                )}
                                             </TooltipContent>
                                         </Tooltip>
                                     </div>
@@ -155,7 +176,9 @@ export default function WorkersIndex({ workers }: { workers: Worker[] }) {
                                         checked={worker.replace_original}
                                         disabled={!worker.enabled}
                                         onCheckedChange={(checked) =>
-                                            handleUpdate(worker, { replace_original: checked })
+                                            handleUpdate(worker, {
+                                                replace_original: checked,
+                                            })
                                         }
                                     />
                                 </div>
@@ -164,15 +187,15 @@ export default function WorkersIndex({ workers }: { workers: Worker[] }) {
                     ))}
                 </div>
             </div>
-        </TooltipProvider>
+        </>
     );
 }
 
 WorkersIndex.layout = (page: React.ReactNode) => (
     <AppLayout
         breadcrumbs={[
-            { title: 'Dashboard', href: '/dashboard' },
-            { title: 'Workers', href: '/workers' },
+            { title: 'Dashboard', href: dashboard() },
+            { title: 'Workers', href: index() },
         ]}
     >
         {page}

@@ -1,16 +1,8 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { ArrowLeft, Info } from 'lucide-react';
+import { update } from '@/actions/App/Http/Controllers/WorkersController';
+import { DateText } from '@/components/date-text';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { type Worker, JobTypeLabels } from '@/types/models';
 import {
     Card,
     CardContent,
@@ -18,10 +10,24 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import AppLayout from '@/layouts/app-layout';
-import { update } from '@/actions/App/Http/Controllers/WorkersController';
+import { dashboard } from '@/routes';
+import { index } from '@/routes/workers';
+import { JobTypeLabels } from '@/types/models';
+import type { Worker } from '@/types/models';
 
-function getTooltipText(jobType: string | null | undefined, setting: 'enabled' | 'concurrency' | 'replace_original'): string {
+function getTooltipText(
+    jobType: string | null | undefined,
+    setting: 'enabled' | 'concurrency' | 'replace_original',
+): string {
     const tooltips = {
         transcode_media: {
             enabled: `Enable or disable video transcoding. When disabled, no videos will be transcoded.`,
@@ -54,27 +60,26 @@ function getTooltipText(jobType: string | null | undefined, setting: 'enabled' |
 }
 
 export default function WorkerDetail({ worker }: { worker: Worker }) {
-    const handleUpdate = (data: Record<string, unknown>) => {
-        router.patch(
-            update.url({ worker: worker.id }),
-            data,
-            { preserveScroll: true },
-        );
+    const handleUpdate = (data: Record<string, string | number | boolean>) => {
+        router.patch(update.url({ worker: worker.id }), data, {
+            preserveScroll: true,
+        });
     };
 
     return (
-        <TooltipProvider>
+        <>
             <Head title={worker.name} />
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <a href="/workers">
+                        <Link href={index()}>
                             <ArrowLeft className="size-4" />
-                        </a>
+                        </Link>
                     </Button>
                     <h1 className="text-2xl font-bold">
                         {worker.job_type
-                            ? JobTypeLabels[worker.job_type] ?? worker.job_type
+                            ? (JobTypeLabels[worker.job_type] ??
+                              worker.job_type)
                             : worker.name}
                     </h1>
                 </div>
@@ -93,15 +98,20 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                                     <div>
                                         <Label>Enabled</Label>
                                         <p className="text-xs text-muted-foreground">
-                                            {worker.enabled ? 'Worker is active' : 'Worker is disabled'}
+                                            {worker.enabled
+                                                ? 'Worker is active'
+                                                : 'Worker is disabled'}
                                         </p>
                                     </div>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Info className="size-4 text-muted-foreground cursor-help" />
+                                            <Info className="size-4 cursor-help text-muted-foreground" />
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                            {getTooltipText(worker.job_type, 'enabled')}
+                                            {getTooltipText(
+                                                worker.job_type,
+                                                'enabled',
+                                            )}
                                         </TooltipContent>
                                     </Tooltip>
                                 </div>
@@ -118,10 +128,13 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                                     <Label>Concurrency</Label>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Info className="size-4 text-muted-foreground cursor-help" />
+                                            <Info className="size-4 cursor-help text-muted-foreground" />
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                            {getTooltipText(worker.job_type, 'concurrency')}
+                                            {getTooltipText(
+                                                worker.job_type,
+                                                'concurrency',
+                                            )}
                                         </TooltipContent>
                                     </Tooltip>
                                 </div>
@@ -136,6 +149,7 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                                     disabled={!worker.enabled}
                                     onBlur={(e) => {
                                         const val = Number(e.target.value);
+
                                         if (
                                             val >= 1 &&
                                             val <= 99 &&
@@ -152,15 +166,19 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                                     <div>
                                         <Label>Replace Original</Label>
                                         <p className="text-xs text-muted-foreground">
-                                            Replace original files with processed versions
+                                            Replace original files with
+                                            processed versions
                                         </p>
                                     </div>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Info className="size-4 text-muted-foreground cursor-help" />
+                                            <Info className="size-4 cursor-help text-muted-foreground" />
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                            {getTooltipText(worker.job_type, 'replace_original')}
+                                            {getTooltipText(
+                                                worker.job_type,
+                                                'replace_original',
+                                            )}
                                         </TooltipContent>
                                     </Tooltip>
                                 </div>
@@ -168,7 +186,9 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                                     checked={worker.replace_original}
                                     disabled={!worker.enabled}
                                     onCheckedChange={(checked) =>
-                                        handleUpdate({ replace_original: checked })
+                                        handleUpdate({
+                                            replace_original: checked,
+                                        })
                                     }
                                 />
                             </div>
@@ -186,7 +206,8 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                                 </span>
                                 <p className="font-medium">
                                     {worker.job_type
-                                        ? JobTypeLabels[worker.job_type] ?? worker.job_type
+                                        ? (JobTypeLabels[worker.job_type] ??
+                                          worker.job_type)
                                         : '-'}
                                 </p>
                             </div>
@@ -195,7 +216,7 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                                     Registered
                                 </span>
                                 <p className="font-medium">
-                                    {new Date(worker.created_at).toLocaleString()}
+                                    <DateText value={worker.created_at} />
                                 </p>
                             </div>
                             <div>
@@ -203,22 +224,22 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                                     Last Updated
                                 </span>
                                 <p className="font-medium">
-                                    {new Date(worker.updated_at).toLocaleString()}
+                                    <DateText value={worker.updated_at} />
                                 </p>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
             </div>
-        </TooltipProvider>
+        </>
     );
 }
 
 WorkerDetail.layout = (page: React.ReactNode) => (
     <AppLayout
         breadcrumbs={[
-            { title: 'Dashboard', href: '/dashboard' },
-            { title: 'Workers', href: '/workers' },
+            { title: 'Dashboard', href: dashboard() },
+            { title: 'Workers', href: index() },
             { title: 'Detail', href: '#' },
         ]}
     >

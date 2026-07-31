@@ -6,21 +6,22 @@ import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { toDateString } from '@/lib/utils';
-import { type Library } from '@/types/models'
+import { dashboard } from '@/routes';
+import { create, index, show } from '@/routes/libraries';
+import type { Library } from '@/types/models';
 
 export default function LibrariesIndex({
     libraries,
 }: {
     libraries: Library[];
 }) {
-
     const columns: Column<Library>[] = [
         {
             key: 'base_path',
             label: 'Path',
             render: (lib) => (
                 <Link
-                    href={`/libraries/${lib.id}`}
+                    href={show.url(lib.id)}
                     className="font-medium hover:underline"
                 >
                     {lib.base_path}
@@ -40,7 +41,7 @@ export default function LibrariesIndex({
         {
             key: 'last_scan',
             label: 'Last Scan',
-            render: (lib) => toDateString(lib.last_scan ?? '')
+            render: (lib) => toDateString(lib.last_scan ?? ''),
         },
         {
             key: 'jobs',
@@ -53,7 +54,7 @@ export default function LibrariesIndex({
             render: (lib) => (
                 <div className="flex justify-end gap-2">
                     <Button variant="outline" size="sm" asChild>
-                        <Link href={`/libraries/${lib.id}`}>View</Link>
+                        <Link href={show.url(lib.id)}>View</Link>
                     </Button>
                 </div>
             ),
@@ -67,7 +68,7 @@ export default function LibrariesIndex({
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold">Libraries</h1>
                     <Button asChild>
-                        <Link href="/libraries/create">
+                        <Link href={create.url()}>
                             <Plus className="mr-1 size-4" />
                             Add Library
                         </Link>
@@ -86,8 +87,8 @@ export default function LibrariesIndex({
 LibrariesIndex.layout = (page: React.ReactNode) => (
     <AppLayout
         breadcrumbs={[
-            { title: 'Dashboard', href: '/dashboard' },
-            { title: 'Libraries', href: '/libraries' },
+            { title: 'Dashboard', href: dashboard() },
+            { title: 'Libraries', href: index() },
         ]}
     >
         {page}

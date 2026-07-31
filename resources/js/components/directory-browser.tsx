@@ -1,5 +1,10 @@
-import { AlertCircle, ChevronRightIcon, FolderIcon, Loader2Icon } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import {
+    AlertCircle,
+    ChevronRightIcon,
+    FolderIcon,
+    Loader2Icon,
+} from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -104,8 +109,9 @@ export default function DirectoryBrowser({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedPath, setSelectedPath] = useState<string | null>(null);
+    const abortRef = useRef<AbortController | null>(null);
 
-    const fetchTree = useCallback(async () => {
+    const fetchTree = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
         setTree(null);
         setError(null);
@@ -124,6 +130,7 @@ export default function DirectoryBrowser({
                         'X-CSRF-TOKEN': token,
                         'X-Requested-With': 'XMLHttpRequest',
                     },
+                    signal,
                 },
             );
 
@@ -148,6 +155,10 @@ export default function DirectoryBrowser({
             const data = await response.json();
             setTree(data.directories);
         } catch (e) {
+            if (e instanceof Error && e.name === 'AbortError') {
+                return;
+            }
+
             setError(
                 e instanceof Error
                     ? e.message
@@ -155,16 +166,25 @@ export default function DirectoryBrowser({
             );
             setTree([]);
         } finally {
-            setLoading(false);
+            if (!signal?.aborted) {
+                setLoading(false);
+            }
         }
     }, []);
 
     useEffect(() => {
-        if (open) {
-            // fetchTree is async — setState runs in microtask, no cascade
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            fetchTree();
+        if (!open) {
+            return;
         }
+
+        const controller = new AbortController();
+        abortRef.current = controller;
+
+        void (async (signal: AbortSignal) => {
+            await fetchTree(signal);
+        })(controller.signal);
+
+        return () => abortRef.current?.abort();
     }, [open, fetchTree]);
 
     const handleSelect = () => {
@@ -175,7 +195,12 @@ export default function DirectoryBrowser({
     };
 
     const handleRetry = () => {
-        fetchTree();
+        abortRef.current?.abort();
+
+        const controller = new AbortController();
+        abortRef.current = controller;
+
+        void fetchTree(controller.signal);
     };
 
     return (

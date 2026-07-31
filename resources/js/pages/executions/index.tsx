@@ -16,11 +16,14 @@ import {
 } from '@/actions/App/Http/Controllers/ExecutionsController';
 import { DataTable } from '@/components/data-table';
 import type { Column } from '@/components/data-table';
+import { DateText } from '@/components/date-text';
 import { FilterBar } from '@/components/filter-bar';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import AppLayout from '@/layouts/app-layout';
+import { dashboard } from '@/routes';
+import { index } from '@/routes/executions';
 
 type Execution = {
     id: number;
@@ -47,7 +50,7 @@ type Pagination = {
 };
 
 const lifecycleConfirm = (action: string, count: number) =>
-    confirm(`${action} ${count} execution(s)?`);
+    `${action} ${count} execution(s)?`;
 
 export default function ExecutionsIndex({
     executions,
@@ -82,18 +85,14 @@ export default function ExecutionsIndex({
         }
     };
 
-    const batchAction = (
-        action: string,
-        url: string,
-        confirmMsg?: string,
-    ) => {
+    const batchAction = (action: string, url: string, confirmMsg?: string) => {
         if (selectedIds.size === 0) {
-return;
-}
+            return;
+        }
 
         if (confirmMsg && !confirm(confirmMsg)) {
-return;
-}
+            return;
+        }
 
         router.post(
             url,
@@ -102,35 +101,34 @@ return;
         );
     };
 
-    const singleAction = (
-        action: string,
-        url: string,
-        confirmMsg?: string,
-    ) => {
+    const singleAction = (action: string, url: string, confirmMsg?: string) => {
         if (confirmMsg && !confirm(confirmMsg)) {
-return;
-}
+            return;
+        }
 
         router.post(url, {}, { preserveScroll: true });
     };
 
     const handleRetry = (execution: Execution) => {
         if (!confirm('Retry this execution?')) {
-return;
-}
+            return;
+        }
 
-        router.post(retry.url({ execution: execution.id }), {}, { preserveScroll: true });
+        router.post(
+            retry.url({ execution: execution.id }),
+            {},
+            { preserveScroll: true },
+        );
     };
-
-    
-
 
     const handleDelete = (execution: Execution) => {
         if (!confirm('Delete this execution record?')) {
-return;
-}
+            return;
+        }
 
-        router.delete(destroy.url({ execution: execution.id }), { preserveScroll: true });
+        router.delete(destroy.url({ execution: execution.id }), {
+            preserveScroll: true,
+        });
     };
 
     const columns: Column<Execution>[] = [
@@ -144,7 +142,7 @@ return;
                     }
                     onCheckedChange={toggleSelectAll}
                 />
-            ),
+            ) as unknown as string,
             render: (e) => (
                 <Checkbox
                     checked={selectedIds.has(e.id)}
@@ -177,7 +175,7 @@ return;
         {
             key: 'created_at',
             label: 'Created',
-            render: (e) => new Date(e.created_at).toLocaleString(),
+            render: (e) => <DateText value={e.created_at} />,
         },
         {
             key: 'actions',
@@ -249,7 +247,7 @@ return;
                                 singleAction(
                                     'Stop',
                                     stop.url({ execution: e.id }),
-                                    cancelConfirm(e.status),
+                                    lifecycleConfirm('Stop', 1),
                                 )
                             }
                             title="Stop"
@@ -393,15 +391,13 @@ return;
 
                 {executions.last_page > 1 && (
                     <div className="mt-4 flex items-center justify-center gap-2">
-                        {executions.links.map((link, i) => (
+                        {executions.links.map((link) => (
                             <Button
-                                key={i}
+                                key={link.label}
                                 variant={link.active ? 'default' : 'outline'}
                                 size="sm"
                                 disabled={!link.url}
-                                onClick={() =>
-                                    link.url && router.get(link.url)
-                                }
+                                onClick={() => link.url && router.get(link.url)}
                                 dangerouslySetInnerHTML={{
                                     __html: link.label,
                                 }}
@@ -417,8 +413,8 @@ return;
 ExecutionsIndex.layout = (page: React.ReactNode) => (
     <AppLayout
         breadcrumbs={[
-            { title: 'Dashboard', href: '/dashboard' },
-            { title: 'Executions', href: '/executions' },
+            { title: 'Dashboard', href: dashboard() },
+            { title: 'Executions', href: index() },
         ]}
     >
         {page}

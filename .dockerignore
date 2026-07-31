@@ -7,9 +7,15 @@
 node_modules
 vendor
 
+# Package-manager lockfiles (bun is the only package manager; these never apply)
+/package-lock.json
+/pnpm-workspace.yaml
+/pnpm-lock.yaml
+/yarn.lock
+
 # CI & Tooling
-.github
-.storybook
+/.github/
+/.storybook/
 stubs
 phpunit.xml
 phpstan-baseline.php
@@ -17,20 +23,21 @@ phpstan.neon
 *.dist
 .editorconfig
 eslint.config.js
-prettier.config.*
-pnpm-lock.yaml
-pnpm-workspace.yaml
+/.prettierrc
+/.prettierignore
 
 # Tests (not needed in production)
 tests
-tests-frontend
-tests-browser
+/tests-frontend/
+/tests-browser/
+/playwright.config.ts
+/vitest.config.ts
 
 # Development environment
 .env
 .env.local
 .env.production
-# Keep .env.example.docker (needed at runtime for first boot)
+# Keep .env.prod.example and .env.example (needed at runtime / first boot)
 !.env.prod.example
 !.env.example
 docker/
@@ -38,6 +45,31 @@ docker/
 openspec/
 rr/
 .docker
+
+# Agent / tooling config directories
+/.agents/
+/.claude/
+/.opencode/
+/.omp/
+/.pi/
+/.codegraph/
+/.zed/
+
+# IDE helper files
+/_ide_helper.php
+/.phpstorm.meta.php
+
+# Scratch / notes
+/todo.md
+/todo.txt
+/draft.yaml
+
+# Supervisor (Sail uses docker/8.5/supervisord.conf)
+/supervisord.conf
+
+# Media (mounted at runtime, never baked into the image)
+/test-media/
+/media/
 
 # Documentation (not needed in runtime)
 *.md

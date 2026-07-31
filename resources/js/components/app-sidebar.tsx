@@ -21,6 +21,10 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { edit as scanSettings } from '@/routes/config/scan';
+import { index as executionsIndex } from '@/routes/executions';
+import { index as librariesIndex } from '@/routes/libraries';
+import { index as workersIndex } from '@/routes/workers';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -34,17 +38,17 @@ const mainNavItems: NavItem[] = [
 const managementNavItems: NavItem[] = [
     {
         title: 'Libraries',
-        href: '/libraries',
+        href: librariesIndex(),
         icon: Telescope,
     },
     {
         title: 'Executions',
-        href: '/executions',
+        href: executionsIndex(),
         icon: ListChecks,
     },
     {
         title: 'Workers',
-        href: '/workers',
+        href: workersIndex(),
         icon: Truck,
     },
 ];
@@ -52,7 +56,7 @@ const managementNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [
     {
         title: 'Scan Settings',
-        href: '/config/scan',
+        href: scanSettings(),
         icon: Settings2,
     },
     {

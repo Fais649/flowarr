@@ -1,10 +1,12 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { DateText } from '@/components/date-text';
 import { EmptyState } from '@/components/empty-state';
 import { MetricCard } from '@/components/metric-card';
 import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { dashboard } from '@/routes';
+import { create, show } from '@/routes/libraries';
 
 type ProcessingExecution = {
     id: number;
@@ -117,8 +119,7 @@ export default function Dashboard({
                                                 {exec.file_path}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
-                                                {exec.library} /{' '}
-                                                {exec.job_type}
+                                                {exec.library} / {exec.job_type}
                                                 {exec.duration !== null &&
                                                     ` · ${exec.duration}m`}
                                             </p>
@@ -137,8 +138,7 @@ export default function Dashboard({
                         description="Add your first media library to get started with automated transcoding."
                         action={{
                             label: 'Add Library',
-                            onClick: () =>
-                                (window.location.href = '/libraries/create'),
+                            onClick: () => router.visit(create()),
                         }}
                     />
                 ) : (
@@ -173,11 +173,11 @@ export default function Dashboard({
                                                     <StatusBadge
                                                         status={exec.status}
                                                     />
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {new Date(
-                                                            exec.created_at,
-                                                        ).toLocaleDateString()}
-                                                    </span>
+                                                    <DateText
+                                                        value={exec.created_at}
+                                                        format="date"
+                                                        className="text-xs text-muted-foreground"
+                                                    />
                                                 </div>
                                             </div>
                                         ))}
@@ -199,7 +199,7 @@ export default function Dashboard({
                                         >
                                             <div className="min-w-0 flex-1">
                                                 <Link
-                                                    href={`/libraries/${lib.id}`}
+                                                    href={show(lib.id)}
                                                     className="text-sm font-medium hover:underline"
                                                 >
                                                     {lib.base_path}
@@ -213,13 +213,17 @@ export default function Dashboard({
                                                 <StatusBadge
                                                     status={lib.status}
                                                 />
-                                                <span className="text-xs text-muted-foreground">
-                                                    {lib.last_scan
-                                                        ? new Date(
-                                                              lib.last_scan,
-                                                          ).toLocaleDateString()
-                                                        : 'Never scanned'}
-                                                </span>
+                                                {lib.last_scan ? (
+                                                    <DateText
+                                                        value={lib.last_scan}
+                                                        format="date"
+                                                        className="text-xs text-muted-foreground"
+                                                    />
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">
+                                                        Never scanned
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     ))}

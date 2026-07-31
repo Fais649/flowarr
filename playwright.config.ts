@@ -12,7 +12,7 @@ export default defineConfig({
         ['list'],
     ],
     use: {
-        baseURL: 'http://localhost',
+        baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost',
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         headless: true,

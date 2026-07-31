@@ -11,7 +11,7 @@ type Props = {
     concurrency: number;
 };
 
-export default function Scan({ concurrency }: Props) {
+function ScanForm({ concurrency }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         concurrency,
     });
@@ -24,55 +24,55 @@ export default function Scan({ concurrency }: Props) {
     };
 
     return (
+        <form onSubmit={submit} className="space-y-6">
+            <div className="grid max-w-xs gap-2">
+                <Label htmlFor="concurrency">Concurrent library scans</Label>
+                <p className="text-sm text-muted-foreground">
+                    Maximum number of libraries scanned at the same time. Higher
+                    values speed up scanning but use more resources.
+                </p>
+                <Input
+                    id="concurrency"
+                    type="number"
+                    min={1}
+                    className="mt-1 block w-full"
+                    value={data.concurrency}
+                    onChange={(e) =>
+                        setData('concurrency', Number(e.target.value))
+                    }
+                />
+                <InputError className="mt-2" message={errors.concurrency} />
+            </div>
+
+            <div className="flex items-center gap-4">
+                <Button
+                    disabled={processing}
+                    data-test="update-scan-settings-button"
+                >
+                    Save
+                </Button>
+            </div>
+        </form>
+    );
+}
+
+export default function Scan({ concurrency }: Props) {
+    return (
         <div className="px-4 py-6">
             <Head title="Scan settings" />
 
             <h1 className="sr-only">Scan settings</h1>
 
             <div className="flex-1 md:max-w-2xl">
-            <section className="max-w-xl space-y-12">
-                <Heading
-                    variant="small"
-                    title="Scan settings"
-                    description="Configure how many libraries scan in parallel"
-                />
+                <section className="max-w-xl space-y-12">
+                    <Heading
+                        variant="small"
+                        title="Scan settings"
+                        description="Configure how many libraries scan in parallel"
+                    />
 
-                <form onSubmit={submit} className="space-y-6">
-                    <div className="grid max-w-xs gap-2">
-                        <Label htmlFor="concurrency">
-                            Concurrent library scans
-                        </Label>
-                        <p className="text-sm text-muted-foreground">
-                            Maximum number of libraries scanned at the same
-                            time. Higher values speed up scanning but use more
-                            resources.
-                        </p>
-                        <Input
-                            id="concurrency"
-                            type="number"
-                            min={1}
-                            className="mt-1 block w-full"
-                            value={data.concurrency}
-                            onChange={(e) =>
-                                setData('concurrency', Number(e.target.value))
-                            }
-                        />
-                        <InputError
-                            className="mt-2"
-                            message={errors.concurrency}
-                        />
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <Button
-                            disabled={processing}
-                            data-test="update-scan-settings-button"
-                        >
-                            Save
-                        </Button>
-                    </div>
-                </form>
-            </section>
+                    <ScanForm key={concurrency} concurrency={concurrency} />
+                </section>
             </div>
         </div>
     );

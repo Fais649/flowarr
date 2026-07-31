@@ -36,7 +36,7 @@ export default function ManagePasskeys(props: Props) {
     };
 
     const handleRegisterSuccess = () => {
-        router.reload();
+        router.reload({ only: ['passkeys'] });
     };
 
     if (!(props.canManagePasskeys ?? false)) {

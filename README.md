@@ -27,7 +27,7 @@ Built for the Steam Deck media server problem: transcode h.264 → HEVC for ~60%
 - **Jellyfin Webhook Integration**: Auto-pause all processing when Jellyfin streams are active, resume when they stop
 - **Library Management**: Multiple media directories with per-library job configuration and scan intervals
 - **Execution Tracking**: Full lifecycle tracking from queued → processing → completed/failed
-- **Queue-backed Jobs**: RabbitMQ or database-backed job queues with per-job-type routing
+- **Queue-backed Jobs**: database-backed job queues with per-job-type routing
 - **Web UI**: Dashboard, library management, execution monitoring via Inertia + React
 - **Authentication**: Registration, login, passkeys (WebAuthn), email verification, 2FA/TOTP
 
@@ -38,9 +38,8 @@ Built for the Steam Deck media server problem: transcode h.264 → HEVC for ~60%
 | Backend | PHP 8.5, Laravel 13, Fortify |
 | Frontend | React 19, Inertia v3, TypeScript, Tailwind v4, shadcn/ui |
 | Database | PostgreSQL 18 |
-| Queue | RabbitMQ or database driver |
+| Queue | Database driver |
 | Cache | Redis |
-| Search | Meilisearch |
 | Containers | Docker (single image: nginx + PHP-FPM, Alpine-based) |
 
 ## Quickstart
@@ -119,7 +118,7 @@ services:
       - flowarr-storage:/var/www/html/storage
 ```
 
-The full compose file is at [`docker-compose.yml`](docker-compose.yml) in the repo root. Environment variables are documented in [`.env.prod.example`](.env.prod.example).
+The production compose file is at [`docker-compose.prod.yml`](docker-compose.prod.yml) in the repo root, and the Laravel Sail development compose file is at [`compose.yaml`](compose.yaml). Environment variables are documented in [`.env.prod.example`](.env.prod.example).
 
 #### Container details
 

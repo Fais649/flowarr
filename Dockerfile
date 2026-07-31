@@ -1,5 +1,5 @@
 # Stage 1: Composer dependencies + Wayfinder types
-FROM composer:latest AS composer
+FROM composer:2 AS composer
 WORKDIR /app
 
 COPY composer.json composer.lock ./
@@ -14,14 +14,14 @@ RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php && \
     php artisan wayfinder:generate
 
 # Stage 2: Frontend assets
-FROM node:22-alpine AS assets
+FROM oven/bun:1 AS assets
 WORKDIR /app
 
 # Wayfinder types are pre-generated in composer stage — skip PHP call during build
 ENV SKIP_WAYFINDER=true
 
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
 COPY --from=composer /app/resources/js/wayfinder ./resources/js/wayfinder
 COPY --from=composer /app/resources/js/routes ./resources/js/routes
@@ -30,7 +30,7 @@ COPY vite.config.ts tsconfig.json ./
 COPY resources/ ./resources/
 COPY public/ ./public/
 
-RUN npm run build
+RUN bun run build
 
 # Stage 3: Runtime image
 FROM php:8.5-fpm-alpine AS runtime

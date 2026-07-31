@@ -38,3 +38,31 @@ storybook-static
 .atl/
 rr
 .rr.yaml
+
+# Generated IDE helpers (keep local copies, never commit)
+/.phpstorm.meta.php
+/_ide_helper.php
+
+# Test media fixtures (regenerate with bin/generate-test-media.sh)
+/test-media/
+/media/
+
+# Personal notes and drafts
+/todo.md
+/todo.txt
+/draft.yaml
+
+# Local agent configuration (keep local copies, never commit)
+/.agents/
+/.claude/
+/.opencode/
+/.omp/
+/.pi/
+/.codegraph/
+/.blueprint
+
+# Foreign package manager lockfiles (bun.lock is the sole lockfile)
+/package-lock.json
+/pnpm-lock.yaml
+/pnpm-workspace.yaml
+/yarn.lock

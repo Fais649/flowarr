@@ -11,6 +11,7 @@ export type UseAppearanceReturn = {
 
 const listeners = new Set<() => void>();
 let currentAppearance: Appearance = 'system';
+let themeInitialized = false;
 
 const prefersDark = (): boolean => {
     if (typeof window === 'undefined') {
@@ -74,6 +75,12 @@ export function initializeTheme(): void {
     if (typeof window === 'undefined') {
         return;
     }
+
+    if (themeInitialized) {
+        return;
+    }
+
+    themeInitialized = true;
 
     if (!localStorage.getItem('appearance')) {
         localStorage.setItem('appearance', 'system');

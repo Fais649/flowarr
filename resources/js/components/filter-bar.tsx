@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -48,7 +49,17 @@ export function FilterBar({ filters, search }: FilterBarProps) {
                             }
 
                             params.delete('page');
-                            window.location.href = `${window.location.pathname}?${params.toString()}`;
+
+                            const paramsObject: Record<string, string> = {};
+
+                            params.forEach((paramValue, paramKey) => {
+                                paramsObject[paramKey] = paramValue;
+                            });
+
+                            router.get(window.location.pathname, paramsObject, {
+                                preserveScroll: true,
+                                preserveState: true,
+                            });
                         }}
                     >
                         <SelectTrigger className="w-40">

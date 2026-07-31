@@ -21,13 +21,10 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      matrix:
-        php-version: ['8.5']
 
     services:
       postgres:
-        image: postgres:17
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: sail
           POSTGRES_PASSWORD: password
@@ -60,17 +57,15 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-version }}
+          php-version: '8.5'
           tools: composer:v2
-          coverage: xdebug
+          coverage: none
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
-      - name: Install Node Dependencies
-        run: npm ci
+      - name: Install Bun Dependencies
+        run: bun install --frozen-lockfile
 
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
@@ -82,13 +77,13 @@ jobs:
         run: php artisan key:generate
 
       - name: Build Assets
-        run: npm run build
+        run: bun run build
 
       - name: Run Type Analysis
         run: composer types:check
 
       - name: Frontend Tests
-        run: npm test
+        run: bun run test
 
       - name: Tests
         run: php artisan test

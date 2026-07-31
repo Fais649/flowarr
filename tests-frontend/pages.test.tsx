@@ -21,6 +21,11 @@ vi.mock('@inertiajs/react', () => ({
         flushAll: vi.fn(),
         visit: vi.fn(),
     },
+    useHttp: () => ({
+        data: { name: '', email: '', password: '', password_confirmation: '' },
+        setData: vi.fn(),
+        post: vi.fn(),
+    }),
     Form: ({ children, ...props }: { children: (args: { resetAndClearErrors: () => void; processing: boolean; errors: Record<string, string> }) => React.ReactNode; [key: string]: unknown }) => (
         <form {...props}>{children({ resetAndClearErrors: vi.fn(), processing: false, errors: {} })}</form>
     ),

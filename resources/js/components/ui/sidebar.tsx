@@ -600,13 +600,21 @@ function SidebarMenuSkeleton({
   showIcon?: boolean
 }) {
 
+  const id = React.useId()
+
   // wrapping in useState to ensure the width is stable across renders
   // also ensures we have a stable reference to the style object
-  const [skeletonStyle] = React.useState(() => (
-      {
-        "--skeleton-width": `${Math.floor(Math.random() * 40) + 50}%` // Random width between 50 to 90%.
+  const [skeletonStyle] = React.useState(() => {
+    let hash = 0
+
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash * 31 + id.charCodeAt(i)) >>> 0
+    }
+
+    return {
+      "--skeleton-width": `${(hash % 40) + 50}%` // Deterministic width between 50 to 90%.
     } as React.CSSProperties
-  ))
+  })
 
   return (
     <div

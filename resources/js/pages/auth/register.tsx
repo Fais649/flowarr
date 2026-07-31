@@ -1,5 +1,4 @@
-import { Head } from '@inertiajs/react';
-import { router } from '@inertiajs/react';
+import { Head, router, useHttp } from '@inertiajs/react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import PasskeyRegistration from '@/components/passkey-register';
@@ -30,7 +29,7 @@ type FormData = {
 
 export default function Register({ passwordRules }: Props) {
     const [step, setStep] = useState(0);
-    const [formData, setFormData] = useState<FormData>({
+    const { data, setData, post } = useHttp({
         name: '',
         email: '',
         password: '',
@@ -42,30 +41,30 @@ export default function Register({ passwordRules }: Props) {
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const updateField = (field: keyof FormData, value: string) => {
-        setFormData((prev) => ({ ...prev, [field]: value }));
+        setData(field, value);
         setErrors((prev) => ({ ...prev, [field]: '' }));
     };
 
     const validateStep1 = (): boolean => {
         const newErrors: Record<string, string> = {};
 
-        if (!formData.name.trim()) {
+        if (!data.name.trim()) {
             newErrors.name = 'Name is required.';
         }
 
-        if (!formData.email.trim()) {
+        if (!data.email.trim()) {
             newErrors.email = 'Email is required.';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
             newErrors.email = 'Please enter a valid email address.';
         }
 
-        if (!formData.password) {
+        if (!data.password) {
             newErrors.password = 'Password is required.';
-        } else if (formData.password.length < 8) {
+        } else if (data.password.length < 8) {
             newErrors.password = 'Password must be at least 8 characters.';
         }
 
-        if (formData.password !== formData.password_confirmation) {
+        if (data.password !== data.password_confirmation) {
             newErrors.password_confirmation = 'Passwords do not match.';
         }
 
@@ -74,53 +73,57 @@ export default function Register({ passwordRules }: Props) {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleCreateAccount = async () => {
-        setSubmitting(true);
+    const handleCreateAccount = () => {
         setErrors({});
 
-        try {
-            const token =
-                document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') ?? '';
+        const token =
+            document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute('content') ?? '';
 
-            const response = await fetch('/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-CSRF-TOKEN': token,
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify(formData),
-            });
+        post('/register', {
+            headers: {
+                'X-CSRF-TOKEN': token,
+            },
+            onStart: () => setSubmitting(true),
+            onSuccess: () => {
+                setAccountCreated(true);
 
-            if (!response.ok) {
-                const body = await response.json();
-
-                if (body.errors) {
-                    setErrors(body.errors);
+                if (showPasskey) {
+                    setStep(2);
                 } else {
-                    setErrors({ form: body.message ?? 'Registration failed.' });
+                    router.visit(home());
                 }
+            },
+            onError: (fieldErrors) => {
+                setErrors(fieldErrors);
+            },
+            onHttpException: (response) => {
+                try {
+                    const body = JSON.parse(response.data);
 
-                return;
-            }
-
-            setAccountCreated(true);
-
-            if (showPasskey) {
-                setStep(2);
-            } else {
-                router.visit(home());
-            }
-        } catch {
-            setErrors({
-                form: 'An unexpected error occurred. Please try again.',
-            });
-        } finally {
-            setSubmitting(false);
-        }
+                    if (body.errors) {
+                        setErrors(body.errors);
+                    } else {
+                        setErrors({
+                            form: body.message ?? 'Registration failed.',
+                        });
+                    }
+                } catch {
+                    setErrors({
+                        form: 'An unexpected error occurred. Please try again.',
+                    });
+                }
+            },
+            onNetworkError: () => {
+                setErrors({
+                    form: 'An unexpected error occurred. Please try again.',
+                });
+            },
+            onFinish: () => setSubmitting(false),
+        }).catch(() => {
+            // Errors are surfaced through the callbacks above.
+        });
     };
 
     if (accountCreated && !showPasskey) {
@@ -149,7 +152,7 @@ export default function Register({ passwordRules }: Props) {
                                 type="text"
                                 required
                                 autoFocus
-                                value={formData.name}
+                                value={data.name}
                                 onChange={(e) =>
                                     updateField('name', e.target.value)
                                 }
@@ -164,7 +167,7 @@ export default function Register({ passwordRules }: Props) {
                                 id="email"
                                 type="email"
                                 required
-                                value={formData.email}
+                                value={data.email}
                                 onChange={(e) =>
                                     updateField('email', e.target.value)
                                 }
@@ -178,7 +181,7 @@ export default function Register({ passwordRules }: Props) {
                             <PasswordInput
                                 id="password"
                                 required
-                                value={formData.password}
+                                value={data.password}
                                 onChange={(e) =>
                                     updateField('password', e.target.value)
                                 }
@@ -195,7 +198,7 @@ export default function Register({ passwordRules }: Props) {
                             <PasswordInput
                                 id="password_confirmation"
                                 required
-                                value={formData.password_confirmation}
+                                value={data.password_confirmation}
                                 onChange={(e) =>
                                     updateField(
                                         'password_confirmation',
@@ -241,13 +244,13 @@ export default function Register({ passwordRules }: Props) {
                                 <span className="text-muted-foreground">
                                     Name
                                 </span>
-                                <span>{formData.name}</span>
+                                <span>{data.name}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">
                                     Email
                                 </span>
-                                <span>{formData.email}</span>
+                                <span>{data.email}</span>
                             </div>
                         </div>
 
