@@ -106,6 +106,10 @@ export default [
     },
     {
         ignores: [
+            'storybook-static/**',
+            'public/build/**',
+            'bootstrap/ssr/**',
+            'coverage/**',
             'vendor',
             'node_modules',
             'public',
