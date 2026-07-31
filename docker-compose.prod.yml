@@ -47,14 +47,14 @@ services:
     restart: unless-stopped
     networks:
       - flowarr
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik"
-      - "traefik.http.routers.flowarr.rule=Host(`${DOMAIN:-flowarr.example.com}`)"
-      - "traefik.http.routers.flowarr.entrypoints=websecure"
-      - "traefik.http.routers.flowarr.tls=true"
-      - "traefik.http.services.flowarr.loadbalancer.server.port=8080"
-      - "traefik.http.services.flowarr.loadbalancer.passhostheader=true"
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.docker.network=traefik"
+    #   - "traefik.http.routers.flowarr.rule=Host(`${DOMAIN:-flowarr.example.com}`)"
+    #   - "traefik.http.routers.flowarr.entrypoints=websecure"
+    #   - "traefik.http.routers.flowarr.tls=true"
+    #   - "traefik.http.services.flowarr.loadbalancer.server.port=8080"
+    #   - "traefik.http.services.flowarr.loadbalancer.passhostheader=true"
 
   flowarr-postgres:
     container_name: flowarr-postgres
