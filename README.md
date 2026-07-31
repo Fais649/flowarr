@@ -149,7 +149,7 @@ Once Postgres is healthy, the Flowarr entrypoint runs in order:
 3. Clears the Laravel configuration, route, event, and view caches
 4. Runs database migrations if `RUN_MIGRATIONS=true` (default)
 5. Rebuilds the configuration, route, event, and view caches
-6. Starts supervisord, which runs PHP-FPM, nginx, the orchestration queue worker (`queue:work --queue=orchestration`), and a one-shot `queue:orchestrate` startup job
+6. Starts supervisord, which runs PHP-FPM, nginx, the orchestration queue worker (`queue:work --queue=orchestration`), the task scheduler (`schedule:work`, which drives interval library scans), and a one-shot `queue:orchestrate` startup job
 
 The transcode, subtitle-extraction, and subtitle-conversion worker pools (10 processes each) are defined with `autostart=false` and are started on demand by the orchestrator. No manual artisan commands required.
 
