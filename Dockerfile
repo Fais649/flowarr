@@ -96,7 +96,7 @@ COPY docker/prod/supervisord.conf /etc/supervisord.conf
 # Create required Laravel directories
 RUN mkdir -p bootstrap/cache storage/framework/cache/data \
         storage/framework/sessions storage/framework/views \
-        storage/logs public/build && \
+        storage/logs public/build /var/log/supervisor && \
     chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Pre-warm caches (config cache will be rebuilt at runtime after .env substitution)
