@@ -26,13 +26,6 @@ return [
     |
     */
 
-    'queues' => [
-        'transcode' => env('QUEUE_TRANSCODE', 'transcode'),
-        'subtitle' => env('QUEUE_SUBTITLE', 'subtitle'),
-        'convert-subs' => env('QUEUE_CONVERT_SUBS', 'convert-subs'),
-        'default' => env('QUEUE_DEFAULT', 'default'),
-    ],
-
     /*
     |--------------------------------------------------------------------------
     | Queue Connections

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\MediaJobQueue;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -13,19 +14,22 @@ class PlaybackController extends Controller
     public function handle(Request $request): JsonResponse
     {
         $event = $request->input('NotificationType');
-        $connection = config('queue.default');
         $queueName = 'default';
 
         switch ($event) {
             case 'PlaybackStart':
                 Log::info('Jellyfin playback started. Pausing queue.');
-                Queue::pause($connection, $queueName);
+                foreach (MediaJobQueue::cases() as $jobQueue) {
+                    Queue::pause($jobQueue->value, $queueName);
+                }
                 Cache::forever('media_processing_paused', true);
                 break;
 
             case 'PlaybackStop':
                 Log::info('Jellyfin playback stopped. Resuming queue.');
-                Queue::resume($connection, $queueName);
+                foreach (MediaJobQueue::cases() as $jobQueue) {
+                    Queue::resume($jobQueue->value, $queueName);
+                }
                 Cache::forget('media_processing_paused');
                 break;
         }

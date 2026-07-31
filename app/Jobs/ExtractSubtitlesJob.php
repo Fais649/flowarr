@@ -3,22 +3,22 @@
 namespace App\Jobs;
 
 use App\Jobs\Concerns\TracksExecution;
-use App\Jobs\Contracts\MediaJob;
+use App\Jobs\Contracts\DispatchableJob;
 use App\MediaJobQueue;
 use Closure;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Attributes\Queue;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
-class ExtractSubtitlesJob implements MediaJob, ShouldQueue
+#[Queue(queue: MediaJobQueue::EXTRACT_SUBTITLES)]
+class ExtractSubtitlesJob implements DispatchableJob, ShouldQueue
 {
     use Queueable;
     use TracksExecution;
-
-    public MediaJobQueue $queue = MediaJobQueue::EXTRACT_SUBTITLES;
 
     private const TEXT_BASED_CODECS = [
         'subrip',
@@ -34,7 +34,6 @@ class ExtractSubtitlesJob implements MediaJob, ShouldQueue
         protected ?Closure $processFactory = null,
         ?int $executionId = null,
     ) {
-        $this->onQueue(config('queue.queues.subtitle', 'subtitle'));
         $this->setExecutionId($executionId);
     }
 

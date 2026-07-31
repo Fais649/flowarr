@@ -3,18 +3,18 @@
 namespace App\Jobs;
 
 use App\LibraryStatus;
-use App\MediaJobQueue;
 use App\Models\Library;
+use App\OrchestrateJobQueue;
 use App\Services\ScannerService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Attributes\Queue;
 use Illuminate\Support\Facades\Log;
 
+#[Queue(queue: OrchestrateJobQueue::SCAN_LIBRARIES)]
 class ScanLibraryJob implements ShouldQueue
 {
     use Queueable;
-
-    public MediaJobQueue $queue = MediaJobQueue::ORCHESTRATE;
 
     /**
      * Create a new job instance.

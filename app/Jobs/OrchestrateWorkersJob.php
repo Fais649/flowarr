@@ -2,26 +2,24 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Contracts\OrchestrationJob;
 use App\LibraryJobId;
-use App\MediaJobQueue;
 use App\Models\Worker;
+use App\OrchestrateJobQueue;
 use App\Services\SupervisorService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Log\Logger;
+use Illuminate\Queue\Attributes\Queue;
 
-class OrchestrateWorkersJob implements ShouldQueue
+#[Queue(queue: OrchestrateJobQueue::ORCHESTRATE_WORKERS)]
+class OrchestrateWorkersJob implements OrchestrationJob, ShouldQueue
 {
     use Queueable;
 
-    public MediaJobQueue $queue = MediaJobQueue::ORCHESTRATE;
-
     private const MAX_PROCS = 10;
 
-    public function __construct(private ?Worker $worker = null)
-    {
-        $this->onQueue('orchestration');
-    }
+    public function __construct(private ?Worker $worker = null) {}
 
     public function handle(SupervisorService $supervisor, Logger $logger): void
     {

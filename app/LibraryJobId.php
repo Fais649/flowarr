@@ -25,12 +25,4 @@ enum LibraryJobId: string
             self::CONVERT_SUBTITLE => ConvertSubtitleJob::class,
         };
     }
-
-    public function getQueue(): string
-    {
-        return match ($this) {
-            self::TRANSCODE_MEDIA => config('queue.queues.transcode', 'transcode'),
-            self::EXTRACT_SUBTITLES, self::CONVERT_SUBTITLE => config('queue.queues.subtitle', 'subtitle'),
-        };
-    }
 }

@@ -3,21 +3,21 @@
 namespace App\Jobs;
 
 use App\Jobs\Concerns\TracksExecution;
-use App\Jobs\Contracts\MediaJob;
+use App\Jobs\Contracts\DispatchableJob;
 use App\MediaJobQueue;
 use App\Services\MediaProbeService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Attributes\Queue;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
-class TranscodeMediaJob implements MediaJob, ShouldQueue
+#[Queue(queue: MediaJobQueue::TRANSCODE_MEDIA)]
+class TranscodeMediaJob implements DispatchableJob, ShouldQueue
 {
     use Queueable;
     use TracksExecution;
-
-    public MediaJobQueue $queue = MediaJobQueue::TRANSCODE_MEDIA;
 
     public function __construct(
         public string $filePath,
@@ -25,7 +25,6 @@ class TranscodeMediaJob implements MediaJob, ShouldQueue
         protected ?Process $process = null,
         ?int $executionId = null,
     ) {
-        $this->onQueue(config('queue.queues.transcode', 'transcode'));
         $this->setExecutionId($executionId);
     }
 
