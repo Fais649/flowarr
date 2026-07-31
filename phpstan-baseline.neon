@@ -100,19 +100,19 @@ parameters:
 			message: '#^Left side of && is always true\.$#'
 			identifier: booleanAnd.leftAlwaysTrue
 			count: 1
-			path: app/Jobs/ConvertSubtitleJob.php
+			path: app/Jobs/ConvertSubtitle.php
 
 		-
 			message: '#^Variable \$outputFile in isset\(\) always exists and is not nullable\.$#'
 			identifier: isset.variable
 			count: 1
-			path: app/Jobs/ExtractSubtitlesJob.php
+			path: app/Jobs/ExtractSubtitles.php
 
 		-
 			message: '#^Parameter \#2 \$callback of function array_filter expects \(callable\(string\)\: bool\)\|null, Closure\(mixed\)\: \(0\|1\|false\) given\.$#'
 			identifier: argument.type
 			count: 1
-			path: app/Jobs/TranscodeMediaJob.php
+			path: app/Jobs/TranscodeMedia.php
 
 		-
 			message: '#^Class App\\Models\\Execution uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
@@ -149,7 +149,6 @@ parameters:
 			identifier: method.notFound
 			count: 1
 			path: app/Services/ScannerService.php
-
 
 		-
 			message: '#^Method App\\Services\\ScannerService\:\:collectMediaFiles\(\) return type has no value type specified in iterable type array\.$#'
