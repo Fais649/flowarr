@@ -50,7 +50,7 @@ class TranscodeMedia implements DispatchableJob, ShouldQueue
 
         // Define rate control parameters to match or optimize quality without inflating size
         $rateControlFlags = match ($videoCodec) {
-            'hevc_nvenc' => ['-rc', 'constqp', '-qp', '28'], // Or use Constant Quality: ['-rc', 'vbr', '-cq', '28']
+            'hevc_nvenc' => ['-cq', '28'],
             default => ['-crf', '28'],
         };
 
