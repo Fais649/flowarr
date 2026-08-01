@@ -8,6 +8,7 @@ use App\Http\Controllers\JellyfinWebhookController;
 use App\Http\Controllers\LibrariesController;
 use App\Http\Controllers\WorkersController;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -15,7 +16,7 @@ Route::get('/', function () {
         return redirect()->to('/register');
     }
 
-    if (auth()->check()) {
+    if (Auth::check()) {
         return redirect()->to(route('dashboard'));
     }
 
@@ -28,47 +29,45 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('libraries/directories', DirectoryController::class)->name('libraries.directories');
 
-    Route::get('libraries', [LibrariesController::class, 'index'])->name('libraries.index');
-    Route::get('libraries/create', [LibrariesController::class, 'create'])->name('libraries.create');
-    Route::post('libraries', [LibrariesController::class, 'store'])->name('libraries.store');
-    Route::get('libraries/{library}', [LibrariesController::class, 'show'])->name('libraries.show');
-    Route::get('libraries/{library}/edit', [LibrariesController::class, 'edit'])->name('libraries.edit');
-    Route::patch('libraries/{library}', [LibrariesController::class, 'update'])->name('libraries.update');
-    Route::delete('libraries/{library}', [LibrariesController::class, 'destroy'])->name('libraries.destroy');
-    Route::post('libraries/{library}/scan', [LibrariesController::class, 'triggerScan'])->name('libraries.scan');
-    Route::post('libraries/{library}/toggle-job', [LibrariesController::class, 'toggleJob'])->name('libraries.toggle-job');
-    Route::post('libraries/{library}/toggle-worker', [LibrariesController::class, 'toggleWorker'])->name('libraries.toggle-worker');
+    Route::controller(LibrariesController::class)->prefix('libraries')->name('libraries.')->group(function () {
+        Route::post('{library}/scan', 'triggerScan')->name('scan');
+        Route::post('{library}/toggle-job', 'toggleJob')->name('toggle-job');
+        Route::post('{library}/toggle-worker', 'toggleWorker')->name('toggle-worker');
+    });
+    Route::resource('libraries', LibrariesController::class);
 
-    Route::get('executions', [ExecutionsController::class, 'index'])->name('executions.index');
-    Route::get('executions/{execution}', [ExecutionsController::class, 'show'])->name('executions.show');
-    Route::post('executions/batch/start', [ExecutionsController::class, 'batchStart'])->name('executions.batch.start');
-    Route::post('executions/batch/pause', [ExecutionsController::class, 'batchPause'])->name('executions.batch.pause');
-    Route::post('executions/batch/resume', [ExecutionsController::class, 'batchResume'])->name('executions.batch.resume');
-    Route::post('executions/batch/stop', [ExecutionsController::class, 'batchStop'])->name('executions.batch.stop');
-    Route::post('executions/batch/delete', [ExecutionsController::class, 'batchDelete'])->name('executions.batch.delete');
-    Route::post('executions/{execution}/retry', [ExecutionsController::class, 'retry'])->name('executions.retry');
-    Route::post('executions/{execution}/cancel', [ExecutionsController::class, 'cancel'])->name('executions.cancel');
-    Route::post('executions/{execution}/start', [ExecutionsController::class, 'start'])->name('executions.start');
-    Route::post('executions/{execution}/pause', [ExecutionsController::class, 'pause'])->name('executions.pause');
-    Route::post('executions/{execution}/resume', [ExecutionsController::class, 'resume'])->name('executions.resume');
-    Route::post('executions/{execution}/stop', [ExecutionsController::class, 'stop'])->name('executions.stop');
-    Route::delete('executions/{execution}', [ExecutionsController::class, 'destroy'])->name('executions.destroy');
+    Route::controller(ExecutionsController::class)->prefix('executions')->name('executions.')->group(function () {
+        Route::post('batch/start', 'batchStart')->name('batch.start');
+        Route::post('batch/pause', 'batchPause')->name('batch.pause');
+        Route::post('batch/resume', 'batchResume')->name('batch.resume');
+        Route::post('batch/stop', 'batchStop')->name('batch.stop');
+        Route::post('batch/delete', 'batchDelete')->name('batch.delete');
+
+        Route::post('{execution}/retry', 'retry')->name('retry');
+        Route::post('{execution}/cancel', 'cancel')->name('cancel');
+        Route::post('{execution}/start', 'start')->name('start');
+        Route::post('{execution}/pause', 'pause')->name('pause');
+        Route::post('{execution}/resume', 'resume')->name('resume');
+        Route::post('{execution}/stop', 'stop')->name('stop');
+    });
+    Route::resource('executions', ExecutionsController::class)->only(['index', 'show', 'destroy']);
 
     if (app()->isLocal()) {
         Route::post('debug/restore-test-data', [DebugController::class, 'restoreTestData']);
     }
 
-    Route::get('workers', [WorkersController::class, 'index'])->name('workers.index');
-    Route::get('workers/{worker}', [WorkersController::class, 'show'])->name('workers.show');
-    Route::patch('workers/{worker}', [WorkersController::class, 'update'])->name('workers.update');
-    Route::post('workers/start-all', [WorkersController::class, 'startAll'])->name('workers.start-all');
-    Route::post('workers/pause-all', [WorkersController::class, 'pauseAll'])->name('workers.pause-all');
-    Route::post('workers/resume-all', [WorkersController::class, 'resumeAll'])->name('workers.resume-all');
-    Route::post('workers/stop-all', [WorkersController::class, 'stopAll'])->name('workers.stop-all');
-    Route::post('workers/{worker}/start', [WorkersController::class, 'start'])->name('workers.start');
-    Route::post('workers/{worker}/pause', [WorkersController::class, 'pause'])->name('workers.pause');
-    Route::post('workers/{worker}/resume', [WorkersController::class, 'resume'])->name('workers.resume');
-    Route::post('workers/{worker}/stop', [WorkersController::class, 'stop'])->name('workers.stop');
+    Route::controller(WorkersController::class)->prefix('workers')->name('workers.')->group(function () {
+        Route::post('start-all', 'startAll')->name('start-all');
+        Route::post('pause-all', 'pauseAll')->name('pause-all');
+        Route::post('resume-all', 'resumeAll')->name('resume-all');
+        Route::post('stop-all', 'stopAll')->name('stop-all');
+
+        Route::post('{worker}/start', 'start')->name('start');
+        Route::post('{worker}/pause', 'pause')->name('pause');
+        Route::post('{worker}/resume', 'resume')->name('resume');
+        Route::post('{worker}/stop', 'stop')->name('stop');
+    });
+    Route::resource('workers', WorkersController::class)->only(['index', 'show', 'update']);
 });
 
 require __DIR__.'/settings.php';

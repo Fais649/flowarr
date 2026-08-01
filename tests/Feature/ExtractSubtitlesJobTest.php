@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\Data\ExtractSubtitlesProcessParam;
 use App\Jobs\ExtractSubtitles;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Process\Process;
@@ -39,7 +40,7 @@ it('successfully extracts subtitles using a mock process', function () {
     $mock->shouldReceive('run')->once();
     $mock->shouldReceive('start')->times(2);
     $mock->shouldReceive('setTimeout')->with(null)->times(2);
-    $mock->shouldReceive('isRunning')->times(4)->andReturn(true, false, true, false);
+    $mock->shouldReceive('isRunning')->times(4)->andReturn(true, false, true, false, true, false);
     $mock->shouldReceive('checkTimeout')->times(2);
     $mock->shouldReceive('isSuccessful')->times(3)->andReturn(true);
     $mock->shouldReceive('getErrorOutput')->andReturn('');
@@ -47,7 +48,18 @@ it('successfully extracts subtitles using a mock process', function () {
 
     $factory = fn (array $command) => $mock;
 
-    $job = new ExtractSubtitles($this->videoFile, true, $factory);
+    $params = new ExtractSubtitlesProcessParam($this->videoFile, $factory);
+
+    $job = new ExtractSubtitles(
+        filePath: $this->videoFile,
+        replaceOriginal: true,
+        processFactory: $factory,
+        executionId: null,
+        params: $params
+    );
+
+    file_put_contents($params->targetFilename, 'dummy content');
+
     $job->handle();
 
     expect(true)->toBeTrue();

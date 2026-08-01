@@ -7,6 +7,32 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $library_job_id
+ * @property string|null $worker_id
+ * @property string $file_path
+ * @property ExecutionStatus $status
+ * @property int|null $started_at
+ * @property int|null $finished_at
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property-read \App\Models\LibraryJob $libraryJob
+ * @method static \Database\Factories\ExecutionFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereFilePath($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereFinishedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereLibraryJobId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereStartedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereWorkerId($value)
+ * @mixin \Eloquent
+ */
 class Execution extends Model
 {
     use HasFactory;

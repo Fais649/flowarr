@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\ExecutionStatus;
+use App\Jobs\Contracts\DispatchableJob;
 use App\LibraryJobId;
 use App\Models\Execution;
 use App\Models\Library;
@@ -217,6 +218,7 @@ class ScannerService
 
         try {
             $jobClass = $jobId->getJobClass();
+            /** @var DispatchableJob $job */
             $job = new $jobClass($filePath, $replaceOriginal);
             $job->setExecutionId($execution->id);
             dispatch($job);

@@ -4,14 +4,15 @@ namespace App\Jobs;
 
 use App\Jobs\Concerns\TracksExecution;
 use App\Jobs\Contracts\DispatchableJob;
+use App\Jobs\Data\TranscodeMediaProcessParam;
 use App\MediaJobQueue;
 use App\Services\MediaProbeService;
+use Closure;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Attributes\Queue;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\Process\Process;
 
 #[Queue(queue: MediaJobQueue::TRANSCODE_MEDIA)]
 class TranscodeMedia implements DispatchableJob, ShouldQueue
@@ -19,28 +20,50 @@ class TranscodeMedia implements DispatchableJob, ShouldQueue
     use Queueable;
     use TracksExecution;
 
+    private const HDR_FILTER = 'zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p';
+
     public function __construct(
         public string $filePath,
         public bool $replaceOriginal = false,
-        protected ?Process $process = null,
+        protected ?Closure $processFactory = null,
         ?int $executionId = null,
+        public ?TranscodeMediaProcessParam $params = null,
     ) {
         $this->setExecutionId($executionId);
-    }
 
-    private const HDR_FILTER = 'zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p';
+        $this->params = $params ?? new TranscodeMediaProcessParam(
+            $filePath,
+            $processFactory
+        );
+    }
 
     public function handle(): void
     {
         $this->markExecutionAsProcessing();
 
-        $inputPath = $this->filePath;
-        $outputPath = preg_replace('/(\.[^.]+)$/', '_HEVC$1', $inputPath);
+        if (! file_exists($this->filePath)) {
+            Log::error(sprintf('Target file does not exist or is inaccessible: %s', $this->filePath));
+            $this->markExecutionAsFailed();
 
-        // Check if we should use software encoding for compatibility (e.g. in CI or if NVENC is unavailable)
-        // We can use a config value to toggle this.
+            return;
+        }
+
+        $success = $this->executeProcess();
+
+        if ($success) {
+            $this->markExecutionAsCompleted();
+            Log::info(sprintf('Finished processing transcode for %s', $this->filePath));
+        }
+    }
+
+    protected function shouldPause(): bool
+    {
+        return Cache::get('media_processing_paused') || Cache::get('active_streams', 0) > 0;
+    }
+
+    private function executeProcess(): bool
+    {
         $useNvenc = config('services.ffmpeg.use_nvenc', true);
-
         $videoCodec = $useNvenc ? 'hevc_nvenc' : 'libx265';
 
         $preset = match ($videoCodec) {
@@ -48,7 +71,6 @@ class TranscodeMedia implements DispatchableJob, ShouldQueue
             default => 'medium',
         };
 
-        // Define rate control parameters to match or optimize quality without inflating size
         $rateControlFlags = match ($videoCodec) {
             'hevc_nvenc' => ['-cq', '28'],
             default => ['-crf', '28'],
@@ -57,19 +79,20 @@ class TranscodeMedia implements DispatchableJob, ShouldQueue
         $command = array_merge([
             config('services.ffmpeg.bin', 'ffmpeg'),
             '-y',
-            '-i', $inputPath,
-            '-vf', $this->resolveVideoFilter($inputPath),
+            '-i', $this->filePath,
+            '-vf', $this->resolveVideoFilter($this->filePath),
             '-c:v', $videoCodec,
             '-preset', $preset,
         ], $rateControlFlags, [
             '-c:a', 'copy',
-            $outputPath,
+            $this->params->targetFilename,
         ]);
 
-        $process = $this->process ?? new Process($command);
+        $factory = $this->params->processFactory;
+        $process = $factory($command);
         $process->setTimeout(null);
+
         if (! $process->isStarted()) {
-            $process->setTimeout(null);
             $process->start();
         }
 
@@ -91,7 +114,6 @@ class TranscodeMedia implements DispatchableJob, ShouldQueue
             $this->markExecutionAsFailed();
 
             $errorOutput = $process->getErrorOutput();
-            // Strip ffmpeg version/configuration banner, keep only actual error lines
             $lines = explode("\n", $errorOutput);
             $errorLines = array_filter($lines, fn ($line) => preg_match('/\[error\]|Error |Unknown |Unrecognized|No such/i', $line));
             $message = ! empty($errorLines)
@@ -104,24 +126,25 @@ class TranscodeMedia implements DispatchableJob, ShouldQueue
         }
 
         if ($this->replaceOriginal) {
-            unlink($inputPath);
-            rename($outputPath, $inputPath);
-            Log::info("Replaced original file with transcoded version: {$inputPath}");
+            if (file_exists($this->params->targetFilename) && filesize($this->params->targetFilename) > 0) {
+                unlink($this->filePath);
+                rename($this->params->targetFilename, $this->filePath);
+                Log::info("Replaced original file with transcoded version: {$this->filePath}");
+            } else {
+                throw new \Exception('FFmpeg completed successfully but output file is missing or empty.');
+            }
         }
 
-        $this->markExecutionAsCompleted();
-        Log::info("Transcode successful {$outputPath}");
+        return true;
     }
 
     private function resolveVideoFilter(string $filePath): string
     {
-        // Allow env override for full control
         $envFilter = config('services.ffmpeg.video_filter');
         if ($envFilter !== null && $envFilter !== '') {
             return $envFilter;
         }
 
-        // Auto-detect HDR — probe the file
         try {
             $probe = app(MediaProbeService::class)->probe($filePath);
             if ($probe->isHdr()) {
@@ -134,11 +157,5 @@ class TranscodeMedia implements DispatchableJob, ShouldQueue
         }
 
         return 'format=yuv420p';
-    }
-
-    /** @phpstan-impure */
-    protected function shouldPause(): bool
-    {
-        return Cache::get('media_processing_paused') || Cache::get('active_streams', 0) > 0;
     }
 }

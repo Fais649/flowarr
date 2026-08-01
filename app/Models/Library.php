@@ -11,6 +11,32 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property string $base_path
+ * @property LibraryStatus $status
+ * @property int $scan_interval
+ * @property int|null $last_scan
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\LibraryJob> $libraryJobs
+ * @property-read int|null $library_jobs_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Worker> $workers
+ * @property-read int|null $workers_count
+ * @method static Builder<static>|Library dueForScan()
+ * @method static \Database\Factories\LibraryFactory factory($count = null, $state = [])
+ * @method static Builder<static>|Library newModelQuery()
+ * @method static Builder<static>|Library newQuery()
+ * @method static Builder<static>|Library query()
+ * @method static Builder<static>|Library whereBasePath($value)
+ * @method static Builder<static>|Library whereCreatedAt($value)
+ * @method static Builder<static>|Library whereId($value)
+ * @method static Builder<static>|Library whereLastScan($value)
+ * @method static Builder<static>|Library whereScanInterval($value)
+ * @method static Builder<static>|Library whereStatus($value)
+ * @method static Builder<static>|Library whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class Library extends Model
 {
     /** @use HasFactory<LibraryFactory> */

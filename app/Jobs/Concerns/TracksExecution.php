@@ -9,46 +9,65 @@ trait TracksExecution
 {
     protected ?int $executionId = null;
 
+    protected ?Execution $execution = null;
+
     public function setExecutionId(?int $id): static
     {
         $this->executionId = $id;
+        $this->execution = Execution::find($id);
 
         return $this;
     }
 
-    protected function markExecutionAsProcessing(): void
+    public function markExecutionAsProcessing(): void
     {
         if ($this->executionId === null) {
             return;
         }
-
-        Execution::where('id', $this->executionId)->update([
-            'status' => ExecutionStatus::PROCESSING,
-            'started_at' => now(),
-        ]);
+        $this->markExecution(
+            [
+                'status' => ExecutionStatus::PROCESSING,
+                'started_at' => now(),
+            ]
+        );
     }
 
-    protected function markExecutionAsCompleted(): void
+    public function markExecutionAsCompleted(): void
     {
         if ($this->executionId === null) {
             return;
         }
 
-        Execution::where('id', $this->executionId)->update([
-            'status' => ExecutionStatus::COMPLETED,
-            'finished_at' => now(),
-        ]);
+        $this->markExecution(
+            [
+                'status' => ExecutionStatus::COMPLETED,
+                'finished_at' => now(),
+            ]
+        );
     }
 
-    protected function markExecutionAsFailed(): void
+    public function markExecutionAsFailed(): void
     {
         if ($this->executionId === null) {
             return;
         }
 
-        Execution::where('id', $this->executionId)->update([
-            'status' => ExecutionStatus::FAILED,
-            'finished_at' => now(),
-        ]);
+        $this->markExecution(
+            [
+                'status' => ExecutionStatus::FAILED,
+                'finished_at' => now(),
+            ]
+        );
+    }
+
+    protected function markExecution(array $attributes)
+    {
+        if ($this->execution) {
+            $this->execution->update($attributes);
+
+            return;
+        }
+
+        Execution::where('id', $this->executionId)->update($attributes);
     }
 }

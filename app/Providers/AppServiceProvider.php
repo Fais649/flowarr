@@ -19,29 +19,14 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         DevCommands::artisan('schedule:work', 'schedule');
-
-        $this->app->bind(FFProbe::class, function () {
-            return FFProbe::create();
-        });
-
-        // If you also inject FFMpeg\FFMpeg elsewhere, bind it as well:
-        $this->app->bind(FFMpeg::class, function () {
-            return FFMpeg::create();
-        });
+        $this->app->singleton(FFProbe::class, fn () => FFProbe::create());
+        $this->app->singleton(FFMpeg::class, fn () => FFMpeg::create());
     }
 
     /**
      * Bootstrap any application services.
      */
     public function boot(): void
-    {
-        $this->configureDefaults();
-    }
-
-    /**
-     * Configure default behaviors for production-ready applications.
-     */
-    protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);
 

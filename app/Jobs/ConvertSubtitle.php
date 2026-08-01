@@ -4,14 +4,15 @@ namespace App\Jobs;
 
 use App\Jobs\Concerns\TracksExecution;
 use App\Jobs\Contracts\DispatchableJob;
+use App\Jobs\Data\ConvertSubtitleProcessParam;
 use App\MediaJobQueue;
+use Closure;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Attributes\Queue;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\Process\Process;
 
 #[Queue(queue: MediaJobQueue::CONVERT_SUBTITLE)]
 class ConvertSubtitle implements DispatchableJob, ShouldQueue
@@ -22,9 +23,16 @@ class ConvertSubtitle implements DispatchableJob, ShouldQueue
     public function __construct(
         private string $filePath,
         public bool $replaceOriginal = false,
+        protected ?Closure $processFactory = null,
         ?int $executionId = null,
+        public ?ConvertSubtitleProcessParam $params = null,
     ) {
         $this->setExecutionId($executionId);
+
+        $this->params = $params ?? new ConvertSubtitleProcessParam(
+            $filePath,
+            $processFactory
+        );
     }
 
     public function handle(): void
@@ -33,18 +41,17 @@ class ConvertSubtitle implements DispatchableJob, ShouldQueue
 
         if (! file_exists($this->filePath)) {
             Log::error(sprintf('Target file does not exist or is inaccessible: %s', $this->filePath));
+            $this->markExecutionAsFailed();
 
             return;
         }
 
-        $dir = pathinfo($this->filePath, PATHINFO_DIRNAME);
-        $baseName = pathinfo($this->filePath, PATHINFO_FILENAME);
         $extension = strtolower(pathinfo($this->filePath, PATHINFO_EXTENSION));
         if ($extension === 'srt') {
+            $this->markExecutionAsCompleted();
+
             return;
         }
-
-        $outputFile = sprintf('%s/%s.srt', $dir, $baseName);
 
         try {
             $convertCommand = [
@@ -53,10 +60,11 @@ class ConvertSubtitle implements DispatchableJob, ShouldQueue
                 $this->filePath,
                 '-c:s',
                 'srt',
-                $outputFile,
+                $this->params->targetFilename,
             ];
 
-            $convert = new Process($convertCommand);
+            $factory = $this->params->processFactory;
+            $convert = $factory($convertCommand);
             $convert->setTimeout(null);
             $convert->start();
 

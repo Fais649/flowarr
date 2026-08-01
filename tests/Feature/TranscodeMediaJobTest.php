@@ -1,6 +1,7 @@
 <?php
 
 use App\ExecutionStatus;
+use App\Jobs\Data\TranscodeMediaProcessParam;
 use App\Jobs\TranscodeMedia;
 use App\Models\Execution;
 use App\Models\Library;
@@ -17,10 +18,7 @@ beforeEach(function () {
     $this->sourceFile = $this->tempDir.'/test.mkv';
     $this->outputPath = $this->tempDir.'/test_HEVC.mkv';
 
-    // Generate a simple dummy video file using ffmpeg
     $ffmpeg = config('services.ffmpeg.bin', 'ffmpeg');
-
-    // Create a simple black video compatible with the zscale filter chain (gbrpf32le)
     $command = "{$ffmpeg} -f lavfi -i color=c=black:s=320x240:d=1 -t 1 -c:v libx264 -pix_fmt gbrpf32le {$this->sourceFile}";
     exec($command);
 
@@ -46,7 +44,17 @@ it('successfully transcodes the generated mkv file using a mock process', functi
     $processMock->shouldReceive('isSuccessful')->andReturn(true);
     $processMock->shouldReceive('getErrorOutput')->andReturn('');
 
-    $job = new TranscodeMedia($this->sourceFile, false, $processMock);
+    $factory = fn (array $command) => $processMock;
+    $params = new TranscodeMediaProcessParam($this->sourceFile, $factory);
+
+    $job = new TranscodeMedia(
+        filePath: $this->sourceFile,
+        replaceOriginal: false,
+        processFactory: $factory,
+        executionId: null,
+        params: $params
+    );
+
     $job->handle();
 
     expect(true)->toBeTrue();
@@ -118,8 +126,17 @@ it('updates execution status when executionId is provided', function () {
     $processMock->shouldReceive('isSuccessful')->andReturn(true);
     $processMock->shouldReceive('getErrorOutput')->andReturn('');
 
-    $job = new TranscodeMedia($this->sourceFile, false, $processMock);
-    $job->setExecutionId($execution->id);
+    $factory = fn (array $command) => $processMock;
+    $params = new TranscodeMediaProcessParam($this->sourceFile, $factory);
+
+    $job = new TranscodeMedia(
+        filePath: $this->sourceFile,
+        replaceOriginal: false,
+        processFactory: $factory,
+        executionId: $execution->id,
+        params: $params
+    );
+
     $job->handle();
 
     $execution->refresh();

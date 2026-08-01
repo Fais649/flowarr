@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\File;
 beforeEach(function () {
     $this->tempDir = storage_path('app/testing_subtitles_'.uniqid());
     File::makeDirectory($this->tempDir, 0777, true, true);
-    Config::set('services.ffmpeg.bin', '/usr/bin/ffmpeg');
+    Config::set('services.ffmpeg.bin', '/usr/local/bin/ffmpeg');
 });
 
 afterEach(function () {
