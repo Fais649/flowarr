@@ -3,39 +3,10 @@
 namespace App\Models;
 
 use App\ExecutionStatus;
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/**
- * @property int $id
- * @property int $library_job_id
- * @property string|null $worker_id
- * @property string $file_path
- * @property ExecutionStatus $status
- * @property int|null $started_at
- * @property int|null $finished_at
- * @property CarbonImmutable|null $created_at
- * @property CarbonImmutable|null $updated_at
- * @property-read LibraryJob $libraryJob
- *
- * @method static \Database\Factories\ExecutionFactory factory($count = null, $state = [])
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution query()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereFilePath($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereFinishedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereLibraryJobId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereStartedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereStatus($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereWorkerId($value)
- *
- * @mixin \Eloquent
- */
 class Execution extends Model
 {
     use HasFactory;
@@ -73,5 +44,13 @@ class Execution extends Model
     public function libraryJob(): BelongsTo
     {
         return $this->belongsTo(LibraryJob::class);
+    }
+
+    /**
+     * @return BelongsTo<Worker,$this>
+     */
+    public function worker(): BelongsTo
+    {
+        return $this->belongsTo(Worker::class);
     }
 }

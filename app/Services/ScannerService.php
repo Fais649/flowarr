@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\ExecutionStatus;
-use App\Jobs\Contracts\DispatchableJob;
 use App\LibraryJobId;
 use App\Models\Execution;
 use App\Models\Library;
@@ -70,7 +69,6 @@ class ScannerService
         }
     }
 
-    /** Directory basenames whose contents are never media files. */
     private const EXCLUDED_DIRS = [
         'node_modules',
         '.git',
@@ -96,7 +94,6 @@ class ScannerService
         );
 
         foreach ($iterator as $file) {
-            // Skip files inside excluded directories (node_modules, .git, vendor, etc.)
             if ($this->isInExcludedDir($file->getPathname())) {
                 continue;
             }
@@ -107,8 +104,6 @@ class ScannerService
                     continue;
                 }
 
-                // Skip files that look like they have a double extension
-                // (e.g. .d.ts -> pathinfo gives ext=ts but basename ends in .d)
                 $filename = $file->getFilename();
                 $nameWithoutExt = pathinfo($filename, PATHINFO_FILENAME);
                 if (str_contains($nameWithoutExt, '.')) {
@@ -153,7 +148,6 @@ class ScannerService
             return false;
         }
 
-        // If FFProbe didn't identify video streams, skip
         if (! $result->isVideo()) {
             return false;
         }
@@ -171,7 +165,6 @@ class ScannerService
             return false;
         }
 
-        // Only check for embedded subs in actual video files
         if (! $result->isVideo()) {
             return false;
         }
@@ -183,12 +176,10 @@ class ScannerService
     {
         $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
-        // Only process files with known subtitle extensions
         if (! in_array($ext, MediaProbeService::SUBTITLE_EXTENSIONS)) {
             return false;
         }
 
-        // Probe the file to verify it's actually a subtitle before dispatching
         try {
             $result = $this->probeService->probe($filePath);
 
@@ -217,11 +208,7 @@ class ScannerService
         ]);
 
         try {
-            $jobClass = $jobId->getJobClass();
-            /** @var DispatchableJob $job */
-            $job = new $jobClass($filePath, $replaceOriginal);
-            $job->setExecutionId($execution->id);
-            dispatch($job);
+            $jobId->dispatch($execution);
         } catch (\Throwable $e) {
             Log::error("Failed to dispatch job for {$filePath}: {$e->getMessage()}");
         }

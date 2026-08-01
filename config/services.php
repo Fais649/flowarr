@@ -37,7 +37,7 @@ return [
 
     'ffmpeg' => [
         'bin' => env('FFMPEG_BIN', 'ffmpeg'),
-        'use_nvenc' => env('FFMPEG_USE_NVENC', true),
+        'enable_gpu_transcoding' => env('ENABLE_GPU_TRANSCODING', true),
         'video_filter' => env('FFMPEG_VIDEO_FILTER'), // null = auto-detect HDR vs SDR
     ],
 

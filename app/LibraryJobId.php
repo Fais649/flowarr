@@ -2,11 +2,11 @@
 
 namespace App;
 
-use App\Jobs\Contracts\DispatchableJob;
 use App\Jobs\ConvertSubtitle;
+use App\Jobs\ExecutionJob;
 use App\Jobs\ExtractSubtitles;
 use App\Jobs\TranscodeMedia;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use App\Models\Execution;
 
 enum LibraryJobId: string
 {
@@ -15,7 +15,7 @@ enum LibraryJobId: string
     case CONVERT_SUBTITLE = 'convert_sub';
 
     /**
-     * @return class-string<ShouldQueue&DispatchableJob>
+     * @return class-string<ExecutionJob>
      */
     public function getJobClass(): string
     {
@@ -23,6 +23,15 @@ enum LibraryJobId: string
             self::TRANSCODE_MEDIA => TranscodeMedia::class,
             self::EXTRACT_SUBTITLES => ExtractSubtitles::class,
             self::CONVERT_SUBTITLE => ConvertSubtitle::class,
+        };
+    }
+
+    public function dispatch(Execution $execution)
+    {
+        match ($this) {
+            self::TRANSCODE_MEDIA => TranscodeMedia::dispatch($execution),
+            self::EXTRACT_SUBTITLES => ExtractSubtitles::dispatch($execution),
+            self::CONVERT_SUBTITLE => ConvertSubtitle::dispatch($execution),
         };
     }
 }

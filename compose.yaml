@@ -22,13 +22,13 @@ services:
         devices:
           - /dev/dri:/dev/dri
         # Nvidia passthrough (use instead of devices if on Nvidia):
-        # deploy:
-        #   resources:
-        #     reservations:
-        #       devices:
-        #         - driver: nvidia
-        #           count: all
-        #           capabilities: [gpu, video, utility]
+        deploy:
+          resources:
+            reservations:
+              devices:
+                - driver: nvidia
+                  count: all
+                  capabilities: [gpu, video, utility]
         volumes:
             - '.:/var/www/html'
             # test-media/ is gitignored; regenerate it with bin/generate-test-media.sh
