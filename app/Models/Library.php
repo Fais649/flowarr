@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\LibraryStatus;
+use Carbon\CarbonImmutable;
 use Database\Factories\LibraryFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -17,12 +19,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property LibraryStatus $status
  * @property int $scan_interval
  * @property int|null $last_scan
- * @property \Carbon\CarbonImmutable|null $created_at
- * @property \Carbon\CarbonImmutable|null $updated_at
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\LibraryJob> $libraryJobs
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ * @property-read Collection<int, LibraryJob> $libraryJobs
  * @property-read int|null $library_jobs_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Worker> $workers
+ * @property-read Collection<int, Worker> $workers
  * @property-read int|null $workers_count
+ *
  * @method static Builder<static>|Library dueForScan()
  * @method static \Database\Factories\LibraryFactory factory($count = null, $state = [])
  * @method static Builder<static>|Library newModelQuery()
@@ -35,6 +38,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @method static Builder<static>|Library whereScanInterval($value)
  * @method static Builder<static>|Library whereStatus($value)
  * @method static Builder<static>|Library whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class Library extends Model

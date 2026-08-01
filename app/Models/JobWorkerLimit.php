@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -9,8 +10,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property string $job_type
  * @property int $max_concurrent
- * @property \Carbon\CarbonImmutable|null $created_at
- * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ *
  * @method static \Database\Factories\JobWorkerLimitFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|JobWorkerLimit newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|JobWorkerLimit newQuery()
@@ -20,6 +22,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|JobWorkerLimit whereJobType($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|JobWorkerLimit whereMaxConcurrent($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|JobWorkerLimit whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class JobWorkerLimit extends Model

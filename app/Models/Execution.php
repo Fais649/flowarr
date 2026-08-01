@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\ExecutionStatus;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,9 +16,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property ExecutionStatus $status
  * @property int|null $started_at
  * @property int|null $finished_at
- * @property \Carbon\CarbonImmutable|null $created_at
- * @property \Carbon\CarbonImmutable|null $updated_at
- * @property-read \App\Models\LibraryJob $libraryJob
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ * @property-read LibraryJob $libraryJob
+ *
  * @method static \Database\Factories\ExecutionFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution newQuery()
@@ -31,6 +33,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereStatus($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Execution whereWorkerId($value)
+ *
  * @mixin \Eloquent
  */
 class Execution extends Model
