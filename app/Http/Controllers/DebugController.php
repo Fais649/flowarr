@@ -13,7 +13,7 @@ class DebugController extends Controller
             abort(404);
         }
 
-        $script = base_path('../test-data/restore-test-data.sh');
+        $script = base_path('./test-media/restore-test-media.sh');
 
         if (! file_exists($script)) {
             Log::error("Restore script not found: {$script}");
