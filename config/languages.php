@@ -73,7 +73,6 @@ return [
     'ido' => 'io',
     'isl' => 'is',
     'ita' => 'it',
-    'iku' => 'iu',
     'jpn' => 'ja',
     'jav' => 'jv',
     'kat' => 'ka',

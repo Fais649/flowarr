@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import {
+    CalendarClock,
     FolderGit2,
     LayoutGrid,
     ListChecks,
@@ -21,6 +22,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { edit as processingSettings } from '@/routes/config/processing';
 import { edit as scanSettings } from '@/routes/config/scan';
 import { index as executionsIndex } from '@/routes/executions';
 import { index as librariesIndex } from '@/routes/libraries';
@@ -54,6 +56,11 @@ const managementNavItems: NavItem[] = [
 ];
 
 const footerNavItems: NavItem[] = [
+    {
+        title: 'Processing',
+        href: processingSettings(),
+        icon: CalendarClock,
+    },
     {
         title: 'Scan Settings',
         href: scanSettings(),

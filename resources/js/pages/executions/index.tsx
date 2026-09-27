@@ -1,42 +1,27 @@
-import { Head, router } from '@inertiajs/react';
-import { RotateCcw, Play, Square, Pause, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { Head, Link, router, usePoll } from '@inertiajs/react';
+import { Pause, Play, RotateCcw, Square, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import {
-    retry,
-    start,
-    pause,
-    resume,
-    stop,
-    destroy,
-    batchStart,
+    batchDelete,
     batchPause,
     batchResume,
+    batchRetry,
     batchStop,
-    batchDelete,
 } from '@/actions/App/Http/Controllers/ExecutionsController';
 import { DataTable } from '@/components/data-table';
 import type { Column } from '@/components/data-table';
 import { DateText } from '@/components/date-text';
+import { ExecutionActions } from '@/components/execution-actions';
+import { ExecutionStatusCell } from '@/components/execution-status';
 import { FilterBar } from '@/components/filter-bar';
-import { StatusBadge } from '@/components/status-badge';
+import { ProcessingBanner } from '@/components/processing-banner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
-import { index } from '@/routes/executions';
-
-type Execution = {
-    id: number;
-    file_path: string;
-    status: string;
-    library_job: {
-        id: number;
-        job_id: string;
-        library: { id: number; base_path: string };
-    };
-    created_at: string;
-    finished_at: string | null;
-};
+import { index, show } from '@/routes/executions';
+import type { Execution } from '@/types/models';
+import { ACTIVE_STATUSES, JobTypeLabels } from '@/types/models';
 
 type Pagination = {
     data: Execution[];
@@ -56,12 +41,57 @@ export default function ExecutionsIndex({
     executions,
     filters,
     statuses,
+    libraries,
 }: {
     executions: Pagination;
     filters: Record<string, string>;
     statuses: { value: string; label: string }[];
+    libraries: { id: number; base_path: string }[];
 }) {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [search, setSearch] = useState(filters.search ?? '');
+    const hasActive = executions.data.some((e) =>
+        ACTIVE_STATUSES.includes(e.status),
+    );
+
+    const { start: startPolling, stop: stopPolling } = usePoll(
+        3000,
+        { only: ['executions'] },
+        { autoStart: false },
+    );
+
+    useEffect(() => {
+        if (hasActive) {
+            startPolling();
+        } else {
+            stopPolling();
+        }
+    }, [hasActive, startPolling, stopPolling]);
+
+    useEffect(() => {
+        if (search === (filters.search ?? '')) {
+            return;
+        }
+
+        const timeout = setTimeout(() => {
+            const params = new URLSearchParams(window.location.search);
+
+            if (search) {
+                params.set('search', search);
+            } else {
+                params.delete('search');
+            }
+
+            params.delete('page');
+            router.get(
+                `${window.location.pathname}?${params.toString()}`,
+                {},
+                { preserveState: true, preserveScroll: true, replace: true },
+            );
+        }, 300);
+
+        return () => clearTimeout(timeout);
+    }, [search, filters.search]);
 
     const toggleSelect = (id: number) => {
         const next = new Set(selectedIds);
@@ -79,13 +109,11 @@ export default function ExecutionsIndex({
         if (selectedIds.size === executions.data.length) {
             setSelectedIds(new Set());
         } else {
-            setSelectedIds(
-                new Set(executions.data.map((e: Execution) => e.id)),
-            );
+            setSelectedIds(new Set(executions.data.map((e) => e.id)));
         }
     };
 
-    const batchAction = (action: string, url: string, confirmMsg?: string) => {
+    const batchAction = (url: string, confirmMsg?: string) => {
         if (selectedIds.size === 0) {
             return;
         }
@@ -101,36 +129,6 @@ export default function ExecutionsIndex({
         );
     };
 
-    const singleAction = (action: string, url: string, confirmMsg?: string) => {
-        if (confirmMsg && !confirm(confirmMsg)) {
-            return;
-        }
-
-        router.post(url, {}, { preserveScroll: true });
-    };
-
-    const handleRetry = (execution: Execution) => {
-        if (!confirm('Retry this execution?')) {
-            return;
-        }
-
-        router.post(
-            retry.url({ execution: execution.id }),
-            {},
-            { preserveScroll: true },
-        );
-    };
-
-    const handleDelete = (execution: Execution) => {
-        if (!confirm('Delete this execution record?')) {
-            return;
-        }
-
-        router.delete(destroy.url({ execution: execution.id }), {
-            preserveScroll: true,
-        });
-    };
-
     const columns: Column<Execution>[] = [
         {
             key: 'select',
@@ -141,12 +139,14 @@ export default function ExecutionsIndex({
                         selectedIds.size === executions.data.length
                     }
                     onCheckedChange={toggleSelectAll}
+                    aria-label="Select all"
                 />
             ) as unknown as string,
             render: (e) => (
                 <Checkbox
                     checked={selectedIds.has(e.id)}
                     onCheckedChange={() => toggleSelect(e.id)}
+                    aria-label={`Select execution ${e.id}`}
                 />
             ),
         },
@@ -154,7 +154,13 @@ export default function ExecutionsIndex({
             key: 'file_path',
             label: 'File',
             render: (e) => (
-                <span className="block max-w-xs truncate">{e.file_path}</span>
+                <Link
+                    href={show(e.id)}
+                    className="block max-w-xs truncate hover:underline"
+                    title={e.file_path}
+                >
+                    {e.file_path}
+                </Link>
             ),
         },
         {
@@ -165,12 +171,21 @@ export default function ExecutionsIndex({
         {
             key: 'job',
             label: 'Job Type',
-            render: (e) => e.library_job?.job_id ?? '-',
+            render: (e) =>
+                JobTypeLabels[e.library_job?.job_id] ??
+                e.library_job?.job_id ??
+                '-',
         },
         {
             key: 'status',
             label: 'Status',
-            render: (e) => <StatusBadge status={e.status} />,
+            render: (e) => (
+                <ExecutionStatusCell
+                    status={e.status}
+                    progress={e.progress}
+                    message={e.message}
+                />
+            ),
         },
         {
             key: 'created_at',
@@ -180,91 +195,7 @@ export default function ExecutionsIndex({
         {
             key: 'actions',
             label: '',
-            render: (e) => (
-                <div className="flex justify-end gap-1">
-                    {(e.status === 'queued' || e.status === 'paused') && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                                singleAction(
-                                    'Start',
-                                    start.url({ execution: e.id }),
-                                )
-                            }
-                            title="Start"
-                        >
-                            <Play className="size-3" />
-                        </Button>
-                    )}
-                    {e.status === 'processing' && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                                singleAction(
-                                    'Pause',
-                                    pause.url({ execution: e.id }),
-                                )
-                            }
-                            title="Pause"
-                        >
-                            <Pause className="size-3" />
-                        </Button>
-                    )}
-                    {e.status === 'paused' && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                                singleAction(
-                                    'Resume',
-                                    resume.url({ execution: e.id }),
-                                )
-                            }
-                            title="Resume"
-                        >
-                            <RotateCcw className="size-3" />
-                        </Button>
-                    )}
-                    {e.status === 'failed' && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRetry(e)}
-                            title="Retry"
-                        >
-                            <RotateCcw className="size-3" />
-                        </Button>
-                    )}
-                    {(e.status === 'queued' ||
-                        e.status === 'processing' ||
-                        e.status === 'paused') && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                                singleAction(
-                                    'Stop',
-                                    stop.url({ execution: e.id }),
-                                    lifecycleConfirm('Stop', 1),
-                                )
-                            }
-                            title="Stop"
-                        >
-                            <Square className="size-3" />
-                        </Button>
-                    )}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(e)}
-                        title="Delete"
-                    >
-                        <Trash2 className="size-3" />
-                    </Button>
-                </div>
-            ),
+            render: (e) => <ExecutionActions execution={e} />,
         },
     ];
 
@@ -272,7 +203,14 @@ export default function ExecutionsIndex({
         <>
             <Head title="Executions" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
-                <h1 className="text-2xl font-bold">Executions</h1>
+                <div className="flex items-baseline justify-between">
+                    <h1 className="text-2xl font-bold">Executions</h1>
+                    <span className="text-sm text-muted-foreground">
+                        {executions.total} total
+                    </span>
+                </div>
+
+                <ProcessingBanner />
 
                 <FilterBar
                     filters={[
@@ -288,45 +226,52 @@ export default function ExecutionsIndex({
                                 })),
                             ],
                         },
+                        {
+                            key: 'library_id',
+                            label: 'Library',
+                            value: filters.library_id ?? 'all',
+                            options: [
+                                { value: 'all', label: 'All' },
+                                ...libraries.map((l) => ({
+                                    value: String(l.id),
+                                    label: l.base_path,
+                                })),
+                            ],
+                        },
                     ]}
+                    search={{
+                        value: search,
+                        placeholder: 'Search file path…',
+                        onChange: setSearch,
+                    }}
                 />
 
                 {selectedIds.size > 0 && (
-                    <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
+                    <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
                         <span className="text-sm text-muted-foreground">
                             {selectedIds.size} selected
                         </span>
-                        <div className="ml-auto flex gap-1">
+                        <div className="ml-auto flex flex-wrap gap-1">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() =>
                                     batchAction(
-                                        'Start',
-                                        batchStart.url(),
+                                        batchRetry.url(),
                                         lifecycleConfirm(
-                                            'Start',
+                                            'Retry',
                                             selectedIds.size,
                                         ),
                                     )
                                 }
                             >
-                                <Play className="mr-1 size-3" />
-                                Start
+                                <RotateCcw className="mr-1 size-3" />
+                                Retry
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() =>
-                                    batchAction(
-                                        'Pause',
-                                        batchPause.url(),
-                                        lifecycleConfirm(
-                                            'Pause',
-                                            selectedIds.size,
-                                        ),
-                                    )
-                                }
+                                onClick={() => batchAction(batchPause.url())}
                             >
                                 <Pause className="mr-1 size-3" />
                                 Pause
@@ -334,18 +279,9 @@ export default function ExecutionsIndex({
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() =>
-                                    batchAction(
-                                        'Resume',
-                                        batchResume.url(),
-                                        lifecycleConfirm(
-                                            'Resume',
-                                            selectedIds.size,
-                                        ),
-                                    )
-                                }
+                                onClick={() => batchAction(batchResume.url())}
                             >
-                                <RotateCcw className="mr-1 size-3" />
+                                <Play className="mr-1 size-3" />
                                 Resume
                             </Button>
                             <Button
@@ -353,7 +289,6 @@ export default function ExecutionsIndex({
                                 size="sm"
                                 onClick={() =>
                                     batchAction(
-                                        'Stop',
                                         batchStop.url(),
                                         lifecycleConfirm(
                                             'Stop',
@@ -370,7 +305,6 @@ export default function ExecutionsIndex({
                                 size="sm"
                                 onClick={() =>
                                     batchAction(
-                                        'Delete',
                                         batchDelete.url(),
                                         `Delete ${selectedIds.size} execution(s)?`,
                                     )
@@ -390,14 +324,21 @@ export default function ExecutionsIndex({
                 />
 
                 {executions.last_page > 1 && (
-                    <div className="mt-4 flex items-center justify-center gap-2">
+                    <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                         {executions.links.map((link) => (
                             <Button
                                 key={link.label}
                                 variant={link.active ? 'default' : 'outline'}
                                 size="sm"
                                 disabled={!link.url}
-                                onClick={() => link.url && router.get(link.url)}
+                                onClick={() =>
+                                    link.url &&
+                                    router.get(
+                                        link.url,
+                                        {},
+                                        { preserveScroll: true },
+                                    )
+                                }
                                 dangerouslySetInnerHTML={{
                                     __html: link.label,
                                 }}

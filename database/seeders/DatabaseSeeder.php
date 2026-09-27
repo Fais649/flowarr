@@ -23,7 +23,6 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        $this->call(WorkerSettingsSeeder::class);
         $this->call(WorkerDefaultsSeeder::class);
     }
 }

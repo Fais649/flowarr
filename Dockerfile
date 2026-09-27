@@ -44,7 +44,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libzip-dev \
         libicu-dev \
     && curl -fsSL https://repo.jellyfin.org/jellyfin_team.gpg.key | gpg --dearmor -o /etc/apt/trusted.gpg.d/jellyfin.gpg \
-    && echo "deb [arch=amd64] https://repo.jellyfin.org/debian bookworm main" > /etc/apt/sources.list.d/jellyfin.list \
+    && echo "deb [arch=$(dpkg --print-architecture)] https://repo.jellyfin.org/debian bookworm main" > /etc/apt/sources.list.d/jellyfin.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends jellyfin-ffmpeg7 \
     && ln -s /usr/lib/jellyfin-ffmpeg/ffmpeg /usr/local/bin/ffmpeg \
@@ -68,6 +68,7 @@ COPY --from=composer /app/config ./config
 COPY --from=composer /app/database ./database
 COPY --from=composer /app/resources ./resources
 COPY --from=composer /app/routes ./routes
+COPY --from=composer /app/scripts ./scripts
 COPY --from=composer /app/.env.prod.example .env.prod.example
 COPY --from=composer /app/composer.json .
 COPY --from=composer /app/composer.lock .

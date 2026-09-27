@@ -87,7 +87,7 @@ class DirectoryController extends Controller
 
         usort($directories, fn (array $a, array $b) => strcasecmp($a['name'], $b['name']));
 
-        return array_values($directories);
+        return $directories;
     }
 
     private function normalizePath(string $path): string

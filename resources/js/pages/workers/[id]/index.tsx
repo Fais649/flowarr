@@ -1,7 +1,15 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { ArrowLeft, Info } from 'lucide-react';
-import { update } from '@/actions/App/Http/Controllers/WorkersController';
+import { ArrowLeft, Info, Pause, Play, Square } from 'lucide-react';
+import {
+    pause,
+    start,
+    stop,
+    update,
+} from '@/actions/App/Http/Controllers/WorkersController';
+import { DataTable } from '@/components/data-table';
+import type { Column } from '@/components/data-table';
 import { DateText } from '@/components/date-text';
+import { ExecutionStatusCell } from '@/components/execution-status';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -19,52 +27,66 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import AppLayout from '@/layouts/app-layout';
+import { getTooltipText } from '@/lib/worker-tooltips';
 import { dashboard } from '@/routes';
+import { show as showExecution } from '@/routes/executions';
 import { index } from '@/routes/workers';
 import { JobTypeLabels } from '@/types/models';
-import type { Worker } from '@/types/models';
+import type { Execution, Worker } from '@/types/models';
 
-function getTooltipText(
-    jobType: string | null | undefined,
-    setting: 'enabled' | 'concurrency' | 'replace_original',
-): string {
-    const tooltips = {
-        transcode_media: {
-            enabled: `Enable or disable video transcoding. When disabled, no videos will be transcoded.`,
-            concurrency: `Number of videos to transcode simultaneously. Higher values process more videos in parallel but use more system resources.`,
-            replace_original: `Replace original video files with transcoded versions. When enabled, the original file is deleted after successful transcoding.`,
-        },
-        extract_subs: {
-            enabled: `Enable or disable subtitle extraction. When disabled, no subtitles will be extracted from videos.`,
-            concurrency: `Number of subtitle extractions to run simultaneously. Higher values process more videos in parallel but use more system resources.`,
-            replace_original: `Remove embedded subtitles from video files after extraction. When enabled, embedded subtitles are stripped from the original video.`,
-        },
-        convert_sub: {
-            enabled: `Enable or disable subtitle format conversion. When disabled, no subtitle files will be converted to SRT format.`,
-            concurrency: `Number of subtitle conversions to run simultaneously. Higher values process more files in parallel but use more system resources.`,
-            replace_original: `Delete original subtitle files after conversion to SRT. When enabled, only the converted SRT file is kept.`,
-        },
-    };
-
-    const defaultTooltips = {
-        enabled: `Enable or disable this worker. When disabled, no jobs of this type will be processed.`,
-        concurrency: `Number of jobs to process simultaneously. Higher values process more items in parallel but use more system resources.`,
-        replace_original: `Replace original files with processed versions. When enabled, original files are deleted after successful processing.`,
-    };
-
-    if (jobType && tooltips[jobType as keyof typeof tooltips]) {
-        return tooltips[jobType as keyof typeof tooltips][setting];
-    }
-
-    return defaultTooltips[setting];
-}
-
-export default function WorkerDetail({ worker }: { worker: Worker }) {
+export default function WorkerDetail({
+    worker,
+    maxConcurrency,
+    recentExecutions,
+}: {
+    worker: Worker;
+    maxConcurrency: number;
+    recentExecutions: Execution[];
+}) {
     const handleUpdate = (data: Record<string, string | number | boolean>) => {
         router.patch(update.url({ worker: worker.id }), data, {
             preserveScroll: true,
         });
     };
+
+    const post = (url: string, message?: string) => {
+        if (message && !confirm(message)) {
+            return;
+        }
+
+        router.post(url, {}, { preserveScroll: true });
+    };
+
+    const executionColumns: Column<Execution>[] = [
+        {
+            key: 'file_path',
+            label: 'File',
+            render: (e) => (
+                <Link
+                    href={showExecution(e.id)}
+                    className="block max-w-md truncate hover:underline"
+                >
+                    {e.file_path}
+                </Link>
+            ),
+        },
+        {
+            key: 'status',
+            label: 'Status',
+            render: (e) => (
+                <ExecutionStatusCell
+                    status={e.status}
+                    progress={e.progress}
+                    message={e.message}
+                />
+            ),
+        },
+        {
+            key: 'created_at',
+            label: 'Created',
+            render: (e) => <DateText value={e.created_at} />,
+        },
+    ];
 
     return (
         <>
@@ -76,12 +98,45 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                             <ArrowLeft className="size-4" />
                         </Link>
                     </Button>
-                    <h1 className="text-2xl font-bold">
+                    <h1 className="flex-1 text-2xl font-bold">
                         {worker.job_type
                             ? (JobTypeLabels[worker.job_type] ??
                               worker.job_type)
                             : worker.name}
                     </h1>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() =>
+                                post(start.url({ worker: worker.id }))
+                            }
+                            title="Resume paused and retry stopped/failed executions of this type"
+                        >
+                            <Play className="mr-1 size-4" />
+                            Start
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() =>
+                                post(pause.url({ worker: worker.id }))
+                            }
+                        >
+                            <Pause className="mr-1 size-4" />
+                            Pause
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() =>
+                                post(
+                                    stop.url({ worker: worker.id }),
+                                    'Stop all queued and running executions of this type?',
+                                )
+                            }
+                        >
+                            <Square className="mr-1 size-4" />
+                            Stop
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
@@ -139,12 +194,14 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                                     </Tooltip>
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    Number of concurrent processes (1-99)
+                                    Number of concurrent processes (1-
+                                    {maxConcurrency})
                                 </p>
                                 <Input
+                                    key={worker.concurrency}
                                     type="number"
                                     min={1}
-                                    max={99}
+                                    max={maxConcurrency}
                                     defaultValue={worker.concurrency}
                                     disabled={!worker.enabled}
                                     onBlur={(e) => {
@@ -152,7 +209,7 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
 
                                         if (
                                             val >= 1 &&
-                                            val <= 99 &&
+                                            val <= maxConcurrency &&
                                             val !== worker.concurrency
                                         ) {
                                             handleUpdate({ concurrency: val });
@@ -213,6 +270,26 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                             </div>
                             <div>
                                 <span className="text-sm text-muted-foreground">
+                                    Activity
+                                </span>
+                                <p className="font-medium">
+                                    {worker.processing_count ?? 0} running,{' '}
+                                    {worker.queued_count ?? 0} queued
+                                </p>
+                            </div>
+                            <div>
+                                <span className="text-sm text-muted-foreground">
+                                    Queue worker processes
+                                </span>
+                                <p className="font-medium">
+                                    {worker.running_processes === null ||
+                                    worker.running_processes === undefined
+                                        ? 'Unknown (supervisord not reachable)'
+                                        : `${worker.running_processes} running`}
+                                </p>
+                            </div>
+                            <div>
+                                <span className="text-sm text-muted-foreground">
                                     Registered
                                 </span>
                                 <p className="font-medium">
@@ -230,6 +307,19 @@ export default function WorkerDetail({ worker }: { worker: Worker }) {
                         </CardContent>
                     </Card>
                 </div>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Recent Executions</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <DataTable
+                            columns={executionColumns}
+                            data={recentExecutions}
+                            emptyMessage="No executions for this job type yet."
+                        />
+                    </CardContent>
+                </Card>
             </div>
         </>
     );

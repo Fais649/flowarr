@@ -17,10 +17,17 @@ class ScanLibrary implements ShouldQueue
     use Queueable;
 
     /**
+     * Large libraries take a while to walk and probe.
+     */
+    public int $timeout = 0;
+
+    public int $tries = 1;
+
+    /**
      * Create a new job instance.
      */
     public function __construct(
-        private readonly int $libraryId,
+        public readonly int $libraryId,
     ) {}
 
     /**
@@ -28,26 +35,30 @@ class ScanLibrary implements ShouldQueue
      */
     public function handle(ScannerService $scanner): void
     {
-        $library = Library::find($this->libraryId);
+        // Claim the library atomically so the scheduler and a manual
+        // "Scan now" never scan the same library at the same time.
+        $claimed = Library::whereKey($this->libraryId)
+            ->where('status', '!=', LibraryStatus::SCANNING)
+            ->update(['status' => LibraryStatus::SCANNING, 'updated_at' => now()]);
 
-        if (! $library) {
-            Log::warning("ScanLibraryJob: Library {$this->libraryId} not found");
+        if ($claimed === 0) {
+            Log::info("ScanLibrary: library {$this->libraryId} is missing or already being scanned");
 
             return;
         }
 
-        $library->update(['status' => LibraryStatus::SCANNING]);
+        $library = Library::findOrFail($this->libraryId);
 
         try {
-            $scanner->scan($library);
-            $library->update([
+            $queued = $scanner->scan($library);
+            Log::info("ScanLibrary: library {$this->libraryId} scanned, {$queued} execution(s) queued");
+        } catch (\Throwable $e) {
+            Log::error("ScanLibrary: library {$this->libraryId} scan failed: {$e->getMessage()}");
+        } finally {
+            Library::whereKey($this->libraryId)->update([
                 'status' => LibraryStatus::PENDING,
                 'last_scan' => now(),
             ]);
-            Log::info("ScanLibraryJob: Library {$this->libraryId} scan complete");
-        } catch (\Throwable $e) {
-            Log::error("ScanLibraryJob: Library {$this->libraryId} scan failed: {$e->getMessage()}");
-            $library->update(['status' => LibraryStatus::PENDING]);
         }
     }
 }

@@ -38,15 +38,15 @@ return [
     'ffmpeg' => [
         'bin' => env('FFMPEG_BIN', 'ffmpeg'),
         'enable_gpu_transcoding' => env('ENABLE_GPU_TRANSCODING', true),
-        'video_filter' => env('FFMPEG_VIDEO_FILTER'), // null = auto-detect HDR vs SDR
+        // auto | nvidia | amd | software — auto picks NVENC, then VAAPI, then libx265
+        'hw_mode' => env('TRANSCODE_HW_MODE', 'auto'),
+        'vaapi_device' => env('VAAPI_DEVICE', '/dev/dri/renderD128'),
+        'video_filter' => env('FFMPEG_VIDEO_FILTER'), // null = tonemap HDR sources, leave SDR untouched
     ],
 
-    'mkvmerge' => [
-        'bin' => env('MKVMERGE_BIN', 'mkvmerge'),
-    ],
-
-    'jellyfin' => [
-        'webhook_token' => env('JELLYFIN_WEBHOOK_TOKEN'),
+    'media_servers' => [
+        // Shared secret for /webhooks/{jellyfin,plex,emby}; sent as X-Flowarr-Token or ?token=
+        'webhook_token' => env('MEDIA_SERVER_WEBHOOK_TOKEN', env('JELLYFIN_WEBHOOK_TOKEN')),
     ],
 
 ];

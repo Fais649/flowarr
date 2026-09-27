@@ -9,6 +9,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int $library_id
+ * @property LibraryJobId $job_id
+ * @property-read Library|null $library
+ */
 class LibraryJob extends Model
 {
     /** @use HasFactory<LibraryJobFactory> */

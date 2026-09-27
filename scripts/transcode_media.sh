@@ -1,13 +1,40 @@
 #!/bin/bash
+# Transcode a video to HEVC in a Matroska container, preferring GPU encoders.
+#
+# Usage: transcode_media.sh <file> [replace_original] [mode] [video_filter]
+#   replace_original  true|false  replace the source with <name>.mkv instead of writing <name>_hevc.mkv
+#   mode              auto|nvidia|amd|software  encoder selection (auto detects available hardware)
+#   video_filter      optional ffmpeg -vf chain (e.g. HDR -> SDR tonemapping)
+#
+# All audio, subtitle and attachment streams are kept. Output is written to a
+# temporary file first and only moved into place after ffmpeg succeeds.
 set -euo pipefail
 
 FILE_PATH="$1"
 REPLACE_ORIGINAL="${2:-false}"
 MODE="${3:-auto}"
+VIDEO_FILTER="${4:-}"
 
-TEMP_OUTPUT="${FILE_PATH%.*}.tmp.mkv"
 FFMPEG_BIN="${FFMPEG_BIN:-ffmpeg}"
 VAAPI_DEVICE="${VAAPI_DEVICE:-/dev/dri/renderD128}"
+
+BASE_PATH="${FILE_PATH%.*}"
+EXTENSION="${FILE_PATH##*.}"
+TEMP_OUTPUT="${BASE_PATH}.tmp.mkv"
+
+if [ "$REPLACE_ORIGINAL" = "true" ]; then
+    FINAL_OUTPUT="${BASE_PATH}.mkv"
+else
+    FINAL_OUTPUT="${BASE_PATH}_hevc.mkv"
+fi
+
+if [ "$REPLACE_ORIGINAL" = "true" ] && [ "$FINAL_OUTPUT" != "$FILE_PATH" ] && [ -e "$FINAL_OUTPUT" ]; then
+    echo "Refusing to overwrite existing file: $FINAL_OUTPUT" >&2
+    exit 1
+fi
+
+trap 'rm -f "$TEMP_OUTPUT"' EXIT
+trap 'exit 143' TERM INT
 
 has_encoder() {
     "$FFMPEG_BIN" -hide_banner -encoders 2>/dev/null | grep -qw "$1"
@@ -15,18 +42,18 @@ has_encoder() {
 
 detect_gpu() {
     case "$MODE" in
-        auto|nvidia|amd|software) ;;
-        *) echo "Unknown mode '$MODE', defaulting to auto" >&2 ;;
+        nvidia) echo "nvidia"; return ;;
+        amd) echo "amd"; return ;;
+        software) echo "none"; return ;;
+        auto) ;;
+        *) echo "Unknown mode '$MODE', using auto detection" >&2 ;;
     esac
 
-    if [ "$MODE" = "nvidia" ] || { [ "$MODE" = "auto" ] &&
-        { { command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; } ||
-          [ -e /dev/nvidiactl ] || [ -e /dev/nvidia0 ]; }; }; then
+    if { command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; } ||
+        [ -e /dev/nvidiactl ] || [ -e /dev/nvidia0 ]; then
         echo "nvidia"
-    elif [ "$MODE" = "amd" ] || { [ "$MODE" = "auto" ] && [ -e "$VAAPI_DEVICE" ]; }; then
+    elif [ -e "$VAAPI_DEVICE" ]; then
         echo "amd"
-    elif [ "$MODE" = "software" ]; then
-        echo "none"
     else
         echo "none"
     fi
@@ -35,39 +62,100 @@ detect_gpu() {
 GPU="$(detect_gpu)"
 HW_ARGS=()
 ENCODE_ARGS=()
+FILTER="$VIDEO_FILTER"
 
 case "$GPU" in
     nvidia)
         if has_encoder hevc_nvenc; then
-            ENCODE_ARGS=(-c:v hevc_nvenc -preset p4 -cq 28)
-        else
-            GPU="none"
+            ENCODE_ARGS=(-c:v hevc_nvenc -preset p4 -rc vbr -cq 28 -b:v 0)
         fi
         ;;
     amd)
         if has_encoder hevc_vaapi && [ -e "$VAAPI_DEVICE" ]; then
             HW_ARGS=(-vaapi_device "$VAAPI_DEVICE")
-            ENCODE_ARGS=(-c:v hevc_vaapi -global_quality 28)
-        else
-            GPU="none"
+            ENCODE_ARGS=(-c:v hevc_vaapi -qp 28)
+            # Frames are decoded in software, so upload them to the GPU before encoding.
+            FILTER="${VIDEO_FILTER:+$VIDEO_FILTER,}format=nv12,hwupload"
         fi
         ;;
 esac
 
-if [ "$GPU" = "none" ] || [ ${#ENCODE_ARGS[@]} -eq 0 ]; then
-    ENCODE_ARGS=(-c:v libx265 -preset medium -crf 28)
+SOFTWARE_ARGS=(-c:v libx265 -preset medium -crf 28)
+
+if [ ${#ENCODE_ARGS[@]} -eq 0 ]; then
+    GPU="none"
+    HW_ARGS=()
+    ENCODE_ARGS=("${SOFTWARE_ARGS[@]}")
+    FILTER="$VIDEO_FILTER"
 fi
 
-echo "Transcoding $FILE_PATH using ${ENCODE_ARGS[1]} (GPU: $GPU)"
+# MP4/MOV text subtitles (mov_text) cannot be stored in Matroska as-is.
+SUBTITLE_CODEC="copy"
+case "${EXTENSION,,}" in
+    mp4|m4v|mov) SUBTITLE_CODEC="srt" ;;
+esac
 
-if ! "$FFMPEG_BIN" -y "${HW_ARGS[@]}" -i "$FILE_PATH" "${ENCODE_ARGS[@]}" -c:a copy "$TEMP_OUTPUT"; then
-    echo "Hardware encode with ${ENCODE_ARGS[1]} failed, falling back to libx265" >&2
+# encode <with_streams:true|false> <filter> <hw args...> -- <encoder args...>
+encode() {
+    local with_streams="$1" filter="$2"
+    shift 2
+
+    local hw=()
+    while [ "$#" -gt 0 ] && [ "$1" != "--" ]; do hw+=("$1"); shift; done
+    shift
+
+    local stream_args=(-map 0:v:0 -map '0:a?')
+    if [ "$with_streams" = "true" ]; then
+        stream_args+=(-map '0:s?' -map '0:t?' -c:s "$SUBTITLE_CODEC" -c:t copy)
+    fi
+
+    local filter_args=()
+    if [ -n "$filter" ]; then
+        filter_args=(-vf "$filter")
+    fi
+
     rm -f "$TEMP_OUTPUT"
-    "$FFMPEG_BIN" -y -i "$FILE_PATH" -c:v libx265 -preset medium -crf 28 -c:a copy "$TEMP_OUTPUT"
+    "$FFMPEG_BIN" -hide_banner -nostdin -y \
+        ${hw[@]+"${hw[@]}"} \
+        -i "$FILE_PATH" \
+        "${stream_args[@]}" \
+        ${filter_args[@]+"${filter_args[@]}"} \
+        "$@" \
+        -c:a copy \
+        -max_muxing_queue_size 4096 \
+        "$TEMP_OUTPUT"
+}
+
+echo "Transcoding $FILE_PATH -> $FINAL_OUTPUT using ${ENCODE_ARGS[1]} (GPU: $GPU)"
+
+if ! encode true "$FILTER" ${HW_ARGS[@]+"${HW_ARGS[@]}"} -- "${ENCODE_ARGS[@]}"; then
+    if [ "$GPU" != "none" ]; then
+        echo "Encoding with ${ENCODE_ARGS[1]} failed, retrying with libx265" >&2
+    fi
+
+    if [ "$GPU" = "none" ] || ! encode true "$VIDEO_FILTER" -- "${SOFTWARE_ARGS[@]}"; then
+        echo "Encoding with all streams failed, retrying without subtitles and attachments" >&2
+
+        if ! encode false "$VIDEO_FILTER" -- "${SOFTWARE_ARGS[@]}"; then
+            if [ -z "$VIDEO_FILTER" ]; then
+                exit 1
+            fi
+
+            echo "Encoding with video filter '$VIDEO_FILTER' failed, retrying without it" >&2
+            encode false "" -- "${SOFTWARE_ARGS[@]}"
+        fi
+    fi
 fi
 
-if [ "$REPLACE_ORIGINAL" = "true" ]; then
-    mv "$TEMP_OUTPUT" "$FILE_PATH"
-else
-    mv "$TEMP_OUTPUT" "${FILE_PATH%.*}_hevc.mkv"
+if [ ! -s "$TEMP_OUTPUT" ]; then
+    echo "ffmpeg produced no output" >&2
+    exit 1
 fi
+
+mv "$TEMP_OUTPUT" "$FINAL_OUTPUT"
+
+if [ "$REPLACE_ORIGINAL" = "true" ] && [ "$FINAL_OUTPUT" != "$FILE_PATH" ]; then
+    rm -f "$FILE_PATH"
+fi
+
+echo "Wrote $FINAL_OUTPUT"

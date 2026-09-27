@@ -17,17 +17,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Per-Job-Type Queues
-    |--------------------------------------------------------------------------
-    |
-    | Jobs are routed to named queues based on their type. Configure the queue
-    | name for each job type here. Workers can be started per queue to control
-    | concurrency independently.
-    |
-    */
-
-    /*
-    |--------------------------------------------------------------------------
     | Queue Connections
     |--------------------------------------------------------------------------
     |
@@ -51,7 +40,10 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            // Transcodes run for hours; a short retry_after would hand a running
+            // job to a second worker. Crashed executions are recovered by the
+            // executions:reap scheduled command instead.
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 86400),
             'after_commit' => false,
         ],
 

@@ -7,18 +7,39 @@ use App\Models\Library;
 use App\Models\LibraryJob;
 use App\Models\User;
 use App\Models\Worker;
+use App\Services\ProcessingGate;
+use App\Services\StreamTracker;
+use App\Settings;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
+    Queue::fake();
     $this->user = User::factory()->create();
     $this->actingAs($this->user);
 });
 
 it('lists workers', function () {
-    Worker::factory()->count(2)->create();
-
     $this->get('/workers')
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->component('workers/index'));
+        ->assertInertia(fn ($page) => $page->component('workers/index')
+            // One default worker per job type is created by migration.
+            ->has('workers', 3)
+            ->has('workers.0.queued_count')
+            ->where('maxConcurrency', Worker::MAX_CONCURRENCY)
+            ->where('processing.paused', false)
+            ->missing('capabilities'));
+});
+
+it('loads hardware capabilities as a deferred prop', function () {
+    $this->get('/workers')
+        ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($reload) => $reload->has('capabilities.encoders')));
+});
+
+it('rejects concurrency above the process pool size', function () {
+    $worker = Worker::first();
+
+    $this->patch("/workers/{$worker->id}", ['concurrency' => Worker::MAX_CONCURRENCY + 1])
+        ->assertSessionHasErrors('concurrency');
 });
 
 it('shows worker detail', function () {
@@ -52,7 +73,7 @@ it('starts executions for a worker type', function () {
     ]);
     $execution = Execution::factory()->create([
         'library_job_id' => $job->id,
-        'status' => ExecutionStatus::QUEUED,
+        'status' => ExecutionStatus::PAUSED,
     ]);
     $worker = Worker::factory()->create([
         'job_type' => LibraryJobId::TRANSCODE_MEDIA,
@@ -136,7 +157,8 @@ it('stops executions for a worker type', function () {
     ]);
 });
 
-it('starts all queued and paused executions', function () {
+it('start all lifts a manual pause and resumes paused executions', function () {
+    app(ProcessingGate::class)->pause();
     $e1 = Execution::factory()->create(['status' => ExecutionStatus::QUEUED]);
     $e2 = Execution::factory()->create(['status' => ExecutionStatus::PAUSED]);
     $e3 = Execution::factory()->create(['status' => ExecutionStatus::COMPLETED]);
@@ -144,28 +166,37 @@ it('starts all queued and paused executions', function () {
     $this->post('/workers/start-all')
         ->assertRedirect();
 
-    $this->assertDatabaseHas('executions', ['id' => $e1->id, 'status' => ExecutionStatus::PROCESSING]);
+    expect(Settings::isProcessingPaused())->toBeFalse();
+    $this->assertDatabaseHas('executions', ['id' => $e1->id, 'status' => ExecutionStatus::QUEUED]);
     $this->assertDatabaseHas('executions', ['id' => $e2->id, 'status' => ExecutionStatus::PROCESSING]);
     $this->assertDatabaseHas('executions', ['id' => $e3->id, 'status' => ExecutionStatus::COMPLETED]);
 });
 
-it('pauses all processing executions', function () {
-    $e1 = Execution::factory()->create(['status' => ExecutionStatus::PROCESSING]);
-    $e2 = Execution::factory()->create(['status' => ExecutionStatus::QUEUED]);
-
+it('pause all holds processing through the processing gate', function () {
     $this->post('/workers/pause-all')
         ->assertRedirect();
 
-    $this->assertDatabaseHas('executions', ['id' => $e1->id, 'status' => ExecutionStatus::PAUSED]);
-    $this->assertDatabaseHas('executions', ['id' => $e2->id, 'status' => ExecutionStatus::QUEUED]);
+    expect(Settings::isProcessingPaused())->toBeTrue()
+        ->and(app(ProcessingGate::class)->pauseReasons())->toBe([ProcessingGate::REASON_MANUAL]);
+});
+
+it('clears tracked streams', function () {
+    app(StreamTracker::class)->start('jellyfin', 'abc');
+
+    $this->delete('/workers/streams')->assertRedirect();
+
+    expect(app(StreamTracker::class)->count())->toBe(0);
 });
 
 it('resumes all paused executions', function () {
+    app(ProcessingGate::class)->pause();
     $e1 = Execution::factory()->create(['status' => ExecutionStatus::PAUSED]);
     $e2 = Execution::factory()->create(['status' => ExecutionStatus::QUEUED]);
 
     $this->post('/workers/resume-all')
         ->assertRedirect();
+
+    expect(Settings::isProcessingPaused())->toBeFalse();
 
     $this->assertDatabaseHas('executions', ['id' => $e1->id, 'status' => ExecutionStatus::PROCESSING]);
     $this->assertDatabaseHas('executions', ['id' => $e2->id, 'status' => ExecutionStatus::QUEUED]);

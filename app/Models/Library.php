@@ -3,14 +3,27 @@
 namespace App\Models;
 
 use App\LibraryStatus;
+use Carbon\CarbonImmutable;
 use Database\Factories\LibraryFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property string $base_path
+ * @property LibraryStatus $status
+ * @property int $scan_interval
+ * @property CarbonImmutable|null $last_scan
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ * @property-read Collection<int, LibraryJob> $libraryJobs
+ * @property-read Collection<int, Worker> $workers
+ */
 class Library extends Model
 {
     /** @use HasFactory<LibraryFactory> */
@@ -38,7 +51,7 @@ class Library extends Model
         return [
             'id' => 'integer',
             'status' => LibraryStatus::class,
-            'last_scan' => 'timestamp',
+            'last_scan' => 'datetime',
         ];
     }
 

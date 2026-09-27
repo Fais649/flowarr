@@ -15,20 +15,23 @@
   </p>
 </div>
 
-Flowarr automates media file transformations for private media servers running Jellyfin/Plex. It watches filesystem directories, runs configurable jobs (transcoding, subtitle extraction), and pauses all processing when Jellyfin streams are active to avoid GPU contention.
+Flowarr automates media file transformations for private media servers running Jellyfin, Plex or Emby. It watches filesystem directories, runs configurable jobs (transcoding, subtitle extraction and conversion), and holds all processing while someone is streaming, or outside a time window you choose, so jobs never compete with playback for the GPU.
 
 Built for the Steam Deck media server problem: transcode h.264 → HEVC for ~60% space savings, extract ASS/SSA subtitles to SRT sidecars for direct-play compatibility.
 
 ## Features
 
-- **GPU-Accelerated Transcoding**: HDR → SDR tonemapped HEVC encoding via NVENC (with libx265 fallback)
-- **Subtitle Extraction**: Extract text-based subtitles (SRT, ASS, SSA, WebVTT) to sidecar files, strip internal subtitle tracks
-- **Subtitle Conversion**: Convert non-SRT subtitle files (VTT, ASS) to SRT
-- **Jellyfin Webhook Integration**: Auto-pause all processing when Jellyfin streams are active, resume when they stop
-- **Library Management**: Multiple media directories with per-library job configuration and scan intervals
-- **Execution Tracking**: Full lifecycle tracking from queued → processing → completed/failed
-- **Queue-backed Jobs**: database-backed job queues with per-job-type routing
-- **Web UI**: Dashboard, library management, execution monitoring via Inertia + React
+- **GPU-Accelerated Transcoding**: HEVC encoding via NVENC or VAAPI (AMD/Intel) with automatic detection and libx265 fallback; HDR sources are tonemapped to SDR; all audio, subtitle and attachment tracks are kept
+- **Subtitle Extraction**: Extract text-based subtitles (SRT, ASS, SSA, WebVTT, mov_text) to `<name>.<lang>.srt` sidecars, optionally stripping them from the video
+- **Subtitle Conversion**: Convert ASS/SSA/WebVTT subtitle files to SRT without ever overwriting an existing SRT
+- **Playback-Aware Pausing**: Jellyfin, Plex and Emby webhooks suspend running jobs (SIGSTOP on the whole ffmpeg process tree) and resume them when playback ends
+- **Processing Window**: Only process during chosen hours (e.g. 22:00–06:00); jobs are suspended outside the window
+- **Live Execution Control**: Progress, logs and failure reasons for every file; pause, resume, stop and retry individual or bulk executions
+- **Smart Rescans**: Files are fingerprinted (size + mtime), so unchanged files are never reprocessed and changed files are picked up again
+- **Worker Pools**: Per-job-type concurrency (1–10 processes) scaled live via supervisord, with crash recovery for lost executions
+- **Notifications**: Webhook notifications on completed/failed executions (Discord, Slack and generic JSON)
+- **REST API**: Token-authenticated `/api/v1` for status, libraries, executions and pause/resume, handy for Homepage dashboards and scripts
+- **Web UI**: Dashboard, libraries, executions and workers via Inertia + React
 - **Authentication**: Registration, login, passkeys (WebAuthn), email verification, 2FA/TOTP
 
 ## Tech Stack
@@ -40,7 +43,7 @@ Built for the Steam Deck media server problem: transcode h.264 → HEVC for ~60%
 | Database | PostgreSQL 18 |
 | Queue | Database driver |
 | Cache | Redis |
-| Containers | Docker (single image: nginx + PHP-FPM, Alpine-based) |
+| Containers | Docker (single Debian-based image: nginx + PHP-FPM + supervisord queue workers) |
 
 ## Quickstart
 
@@ -131,11 +134,11 @@ The production compose file is at [`docker-compose.prod.yml`](docker-compose.pro
 
 #### Container details
 
-The Docker image (`ghcr.io/fais649/flowarr:latest`) is a single Alpine-based container where supervisord manages nginx, PHP-FPM, and the queue worker processes.
+The Docker image (`ghcr.io/fais649/flowarr:latest`) is a single Debian-based container where supervisord manages nginx, PHP-FPM, and the queue worker processes.
 
 - **Port**: 8080 (internal), FastCGI proxy to `127.0.0.1:9000`
 - **PHP**: 8.5, extensions: pgsql, pdo_pgsql, bcmath, zip, intl, pcntl, redis
-- **System tools**: ffmpeg 8.1, mkvtoolnix 99, bash, curl, postgresql-client
+- **System tools**: jellyfin-ffmpeg 7 (NVENC, VAAPI, zscale tonemapping), mkvtoolnix, bash, curl, postgresql-client
 - **Build**: 3-stage (composer → assets → runtime), ~465 MB compressed
 
 #### First boot
@@ -149,9 +152,9 @@ Once Postgres is healthy, the Flowarr entrypoint runs in order:
 3. Clears the Laravel configuration, route, event, and view caches
 4. Runs database migrations if `RUN_MIGRATIONS=true` (default)
 5. Rebuilds the configuration, route, event, and view caches
-6. Starts supervisord, which runs PHP-FPM, nginx, the orchestration queue worker (`queue:work --queue=orchestration`), the task scheduler (`schedule:work`, which drives interval library scans), and a one-shot `queue:orchestrate` startup job
+6. Starts supervisord, which runs PHP-FPM, nginx, the orchestration/notification queue worker, the library scanner worker, the task scheduler (`schedule:work`, which drives interval library scans and crash recovery), and a one-shot `queue:orchestrate` startup job
 
-The transcode, subtitle-extraction, and subtitle-conversion worker pools (10 processes each) are defined with `autostart=false` and are started on demand by the orchestrator. No manual artisan commands required.
+The transcode, subtitle-extraction, and subtitle-conversion worker pools (up to 10 processes each) are defined with `autostart=false` and are scaled by the orchestrator to each worker's configured concurrency. Default workers for all three job types are created on first migration. No manual artisan commands required.
 
 #### APP_KEY persistence
 
@@ -215,14 +218,47 @@ The app will be available at `http://localhost`.
 ./vendor/bin/sail artisan test   # Run tests
 ```
 
-## Jellyfin Webhook Integration
+## Media Server Integration
 
-1. Install the **Webhook** plugin in Jellyfin
-2. Add a webhook pointed at `http://your-flowarr-host/webhooks/jellyfin`
-3. Select events: `Playback start` and `Playback stop`
-4. (Optional) Set `JELLYFIN_WEBHOOK_TOKEN` in `.env` to secure the endpoint
+Flowarr holds processing while a media server reports active playback. The endpoint URLs are also listed under **Config → Processing**.
 
-When a stream starts, all running ffmpeg/mkvmerge processes are paused (SIGSTOP). They resume (SIGCONT) when the stream ends.
+| Server | Setup |
+|---|---|
+| **Jellyfin** | Install the **Webhook** plugin, add a *Generic* destination pointed at `http://your-flowarr-host/webhooks/jellyfin`, enable *Playback Start*, *Playback Stop* (and optionally *Playback Progress*) and tick *Send All Properties*. |
+| **Plex** | Settings → Webhooks → add `http://your-flowarr-host/webhooks/plex` (requires Plex Pass). |
+| **Emby** | Settings → Webhooks → add `http://your-flowarr-host/webhooks/emby` with the playback events. |
+
+Set `MEDIA_SERVER_WEBHOOK_TOKEN` to require a shared secret, sent as the `X-Flowarr-Token` header or as a `?token=` query parameter (Plex cannot send custom headers). `JELLYFIN_WEBHOOK_TOKEN` is still honoured.
+
+When a stream starts, running ffmpeg processes are suspended (SIGSTOP) and queued jobs wait; they resume (SIGCONT) when the last stream ends. Sessions without a stop event expire after the configurable stream timeout, and the Workers page can clear them manually.
+
+## Processing Window & Notifications
+
+Under **Config → Processing** you can:
+
+- restrict processing to a daily window (in `APP_TIMEZONE`, may wrap around midnight)
+- send notifications for completed and/or failed executions to a webhook URL (Discord, Slack or any JSON endpoint)
+- generate a REST API token
+
+## REST API
+
+Authenticate with `Authorization: Bearer <token>` (or `X-Api-Key: <token>`):
+
+```bash
+curl -H "Authorization: Bearer $FLOWARR_TOKEN" http://your-flowarr-host/api/v1/status
+curl -X POST -H "Authorization: Bearer $FLOWARR_TOKEN" http://your-flowarr-host/api/v1/processing/pause
+curl -H "Authorization: Bearer $FLOWARR_TOKEN" "http://your-flowarr-host/api/v1/executions?status=failed"
+```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md#rest-api-apiv1) for all endpoints.
+
+## GPU Acceleration
+
+`TRANSCODE_HW_MODE=auto` (default) uses NVENC when an NVIDIA GPU is visible, VAAPI when `/dev/dri/renderD128` exists, and libx265 otherwise. The **Workers** page shows which encoder is detected.
+
+- **AMD / Intel (VAAPI)**: keep the `devices: - /dev/dri:/dev/dri` mapping in `docker-compose.prod.yml`.
+- **NVIDIA**: install the NVIDIA Container Toolkit on the host and use the commented `deploy.resources` block instead.
+- **CPU only**: remove the device mapping or set `ENABLE_GPU_TRANSCODING=false`.
 
 ## Architecture
 

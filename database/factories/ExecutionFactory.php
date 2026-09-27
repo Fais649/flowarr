@@ -12,7 +12,7 @@ class ExecutionFactory extends Factory
     {
         return [
             'library_job_id' => LibraryJob::factory(),
-            'worker_id' => fake()->uuid(),
+            'worker_id' => null,
             'file_path' => fake()->filePath(),
             'status' => fake()->randomElement(ExecutionStatus::cases())->value,
             'started_at' => fake()->optional()->dateTime(),

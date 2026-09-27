@@ -3,20 +3,35 @@ import { useState } from 'react';
 import DirectoryBrowser from '@/components/directory-browser';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
+import type { Worker } from '@/types/models';
+import { JobTypeLabels } from '@/types/models';
 
 function LibraryForm({
     library,
+    workers,
 }: {
     library?: { id: number; base_path: string; scan_interval: number };
+    workers: Worker[];
 }) {
     const [browserOpen, setBrowserOpen] = useState(false);
     const { data, setData, post, patch, processing, errors } = useForm({
         base_path: library?.base_path ?? '',
         scan_interval: library?.scan_interval ?? 43200,
+        worker_ids: workers.map((worker) => worker.id),
     });
+
+    const toggleWorker = (id: number, checked: boolean) => {
+        setData(
+            'worker_ids',
+            checked
+                ? [...data.worker_ids, id]
+                : data.worker_ids.filter((workerId) => workerId !== id),
+        );
+    };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -86,6 +101,38 @@ function LibraryForm({
                                 </p>
                             )}
                         </div>
+                        {!library && workers.length > 0 && (
+                            <div className="space-y-2">
+                                <Label>Jobs to run</Label>
+                                {workers.map((worker) => (
+                                    <label
+                                        key={worker.id}
+                                        className="flex items-center gap-2 text-sm"
+                                    >
+                                        <Checkbox
+                                            checked={data.worker_ids.includes(
+                                                worker.id,
+                                            )}
+                                            onCheckedChange={(checked) =>
+                                                toggleWorker(
+                                                    worker.id,
+                                                    checked === true,
+                                                )
+                                            }
+                                        />
+                                        {worker.job_type
+                                            ? (JobTypeLabels[worker.job_type] ??
+                                              worker.name)
+                                            : worker.name}
+                                    </label>
+                                ))}
+                                <p className="text-xs text-muted-foreground">
+                                    The library is scanned right after it is
+                                    created. Jobs can be changed later on the
+                                    library page.
+                                </p>
+                            </div>
+                        )}
                         <Button type="submit" disabled={processing}>
                             {library ? 'Update Library' : 'Create Library'}
                         </Button>
@@ -104,13 +151,19 @@ function LibraryForm({
 
 export default function CreateLibrary({
     library,
+    workers = [],
 }: {
     library?: { id: number; base_path: string; scan_interval: number };
+    workers?: Worker[];
 }) {
     return (
         <>
             <Head title={library ? 'Edit Library' : 'Create Library'} />
-            <LibraryForm key={library?.id ?? 'new'} library={library} />
+            <LibraryForm
+                key={library?.id ?? 'new'}
+                library={library}
+                workers={workers}
+            />
         </>
     );
 }

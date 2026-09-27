@@ -12,62 +12,49 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Log\Logger;
 use Illuminate\Queue\Attributes\Queue;
 
+/**
+ * Scales each job type's supervisord process pool to the concurrency of its
+ * enabled worker configuration (0 processes when disabled or deleted).
+ */
 #[Queue(queue: OrchestrateJobQueue::ORCHESTRATE_WORKERS)]
 class OrchestrateWorkers implements OrchestrateJob, ShouldQueue
 {
     use Queueable;
 
-    private const MAX_PROCS = 10;
+    private const MAX_PROCS = Worker::MAX_CONCURRENCY;
 
-    public function __construct(private ?Worker $worker = null) {}
+    public function __construct(private ?LibraryJobId $jobType = null) {}
 
     public function handle(SupervisorService $supervisor, Logger $logger): void
     {
-        if ($this->worker) {
-            $this->processWorker($supervisor, $logger, $this->worker);
+        $jobTypes = $this->jobType !== null ? [$this->jobType] : LibraryJobId::cases();
 
-            return;
-        }
-
-        $workers = Worker::all();
-
-        if ($workers->isEmpty()) {
-            $logger->warning('No worker configurations found in the database.');
-
-            return;
-        }
-
-        foreach ($workers as $worker) {
-            $this->processWorker($supervisor, $logger, $worker);
+        foreach ($jobTypes as $jobType) {
+            $target = $this->targetProcesses($jobType);
+            $logger->info("{$jobType->supervisorProgram()} (target: {$target})");
+            $this->syncProgram($supervisor, $jobType->supervisorProgram(), $target);
         }
 
         $logger->info('Queue worker pools orchestrated successfully.');
     }
 
-    private function processWorker(SupervisorService $supervisor, Logger $logger, Worker $worker): void
+    public function targetProcesses(LibraryJobId $jobType): int
     {
-        $programName = match ($worker->job_type) {
-            LibraryJobId::TRANSCODE_MEDIA => 'Transcoder',
-            LibraryJobId::EXTRACT_SUBTITLES => 'ExtractSubs',
-            LibraryJobId::CONVERT_SUBTITLE => 'ConvertSubs',
-            default => null,
-        };
+        $concurrency = (int) Worker::where('job_type', $jobType)
+            ->where('enabled', true)
+            ->max('concurrency');
 
-        if ($programName) {
-            $target = $worker->enabled ? $worker->concurrency : 0;
-            $logger->info("{$programName} (target: {$target})");
-            $this->syncProgram($supervisor, $programName, $target, $logger);
-        }
+        return max(0, min($concurrency, self::MAX_PROCS));
     }
 
-    private function syncProgram(SupervisorService $supervisor, string $program, int $target, Logger $logger): void
+    private function syncProgram(SupervisorService $supervisor, string $program, int $target): void
     {
         for ($i = 0; $i < $target; $i++) {
-            $logger->info($supervisor->startWorker($program, $i) ? 'Started' : 'Failed');
+            $supervisor->startWorker($program, $i);
         }
 
         for ($i = $target; $i < self::MAX_PROCS; $i++) {
-            $logger->info($supervisor->stopWorker($program, $i) ? 'Stopped' : 'Failed');
+            $supervisor->stopWorker($program, $i);
         }
     }
 }

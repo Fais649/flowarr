@@ -9,8 +9,8 @@ use Illuminate\Queue\Attributes\Queue;
 #[Queue(queue: MediaJobQueue::TRANSCODE_MEDIA)]
 class TranscodeMedia extends ExecutionJob
 {
-    public function handle(): void
+    protected function service(): string
     {
-        app(TranscodeExecutionService::class)->process($this->execution);
+        return TranscodeExecutionService::class;
     }
 }

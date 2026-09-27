@@ -24,31 +24,30 @@ class LibrariesController extends Controller
 
         return Inertia::render('libraries/index', [
             'libraries' => $libraries,
-            'jobTypes' => collect(LibraryJobId::cases())->map(fn (LibraryJobId $id) => [
-                'value' => $id->value,
-                'label' => match ($id) {
-                    LibraryJobId::TRANSCODE_MEDIA => 'Transcode Media',
-                    LibraryJobId::EXTRACT_SUBTITLES => 'Extract Subtitles',
-                    LibraryJobId::CONVERT_SUBTITLE => 'Convert Subtitles',
-                },
-            ]),
+            'jobTypes' => LibraryJobId::options(),
         ]);
     }
 
     public function create(): Response
     {
-        return Inertia::render('libraries/create');
+        return Inertia::render('libraries/create', [
+            'workers' => Worker::orderBy('id')->get(),
+        ]);
     }
 
     public function store(StoreLibraryRequest $request): RedirectResponse
     {
         $library = Library::create([
-            'base_path' => $request->base_path,
-            'scan_interval' => $request->scan_interval,
+            'base_path' => $request->validated('base_path'),
+            'scan_interval' => $request->validated('scan_interval'),
             'status' => LibraryStatus::PENDING_SCAN,
         ]);
 
-        dispatch(new ScanLibrary($library->id));
+        // New libraries get every worker unless the form picked a subset,
+        // otherwise the first scan would have nothing to do.
+        $library->workers()->sync($request->validated('worker_ids', Worker::pluck('id')->all()));
+
+        ScanLibrary::dispatch($library->id);
 
         return redirect()->route('libraries.show', $library);
     }
@@ -57,14 +56,18 @@ class LibrariesController extends Controller
     {
         $library->load(['libraryJobs', 'workers']);
 
-        $recentExecutions = Execution::whereIn(
-            'library_job_id',
-            $library->libraryJobs->pluck('id')
-        )
+        $libraryJobIds = $library->libraryJobs->pluck('id');
+
+        $recentExecutions = Execution::whereIn('library_job_id', $libraryJobIds)
             ->with('libraryJob')
             ->orderBy('created_at', 'desc')
             ->limit(20)
             ->get();
+
+        $executionCounts = Execution::whereIn('library_job_id', $libraryJobIds)
+            ->selectRaw('status, count(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
 
         $allWorkers = Worker::orderBy('name')->get();
 
@@ -72,20 +75,17 @@ class LibrariesController extends Controller
             'library' => $library,
             'recentExecutions' => $recentExecutions,
             'allWorkers' => $allWorkers,
-            'jobTypes' => collect(LibraryJobId::cases())->map(fn (LibraryJobId $id) => [
-                'value' => $id->value,
-                'label' => match ($id) {
-                    LibraryJobId::TRANSCODE_MEDIA => 'Transcode Media',
-                    LibraryJobId::EXTRACT_SUBTITLES => 'Extract Subtitles',
-                    LibraryJobId::CONVERT_SUBTITLE => 'Convert Subtitles',
-                },
-            ]),
+            'executionCounts' => $executionCounts,
+            'jobTypes' => LibraryJobId::options(),
         ]);
     }
 
     public function edit(Library $library): Response
     {
-        return Inertia::render('libraries/create', ['library' => $library]);
+        return Inertia::render('libraries/create', [
+            'library' => $library,
+            'workers' => Worker::orderBy('id')->get(),
+        ]);
     }
 
     public function update(UpdateLibraryRequest $request, Library $library): RedirectResponse
@@ -105,8 +105,12 @@ class LibrariesController extends Controller
 
     public function triggerScan(Library $library): RedirectResponse
     {
-        dispatch(new ScanLibrary($library->id));
-        $library->update(['status' => LibraryStatus::PENDING_SCAN]);
+        if ($library->status !== LibraryStatus::SCANNING) {
+            $library->update(['status' => LibraryStatus::PENDING_SCAN]);
+            ScanLibrary::dispatch($library->id);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Library scan started.']);
 
         return redirect()->route('libraries.show', $library);
     }

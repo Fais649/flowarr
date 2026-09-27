@@ -1,11 +1,13 @@
 <?php
 
 use App\ExecutionStatus;
+use App\Jobs\ScanLibrary;
 use App\LibraryJobId;
 use App\Models\Execution;
 use App\Models\Library;
 use App\Models\User;
 use App\Models\Worker;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     $this->user = User::factory()->create();
@@ -41,6 +43,30 @@ it('stores a new library', function () {
         'base_path' => $dir,
         'scan_interval' => 3600,
     ]);
+});
+
+it('attaches every worker to a new library by default', function () {
+    Queue::fake();
+    $dir = sys_get_temp_dir().'/lib-test-'.uniqid();
+    mkdir($dir, 0755, true);
+
+    $this->post('/libraries', ['base_path' => $dir, 'scan_interval' => 3600])->assertRedirect();
+
+    $library = Library::where('base_path', $dir)->firstOrFail();
+    expect($library->workers()->count())->toBe(Worker::count());
+    Queue::assertPushed(ScanLibrary::class, fn (ScanLibrary $job) => $job->libraryId === $library->id);
+});
+
+it('attaches only the selected workers to a new library', function () {
+    Queue::fake();
+    $dir = sys_get_temp_dir().'/lib-test-'.uniqid();
+    mkdir($dir, 0755, true);
+    $worker = Worker::where('job_type', LibraryJobId::TRANSCODE_MEDIA)->firstOrFail();
+
+    $this->post('/libraries', ['base_path' => $dir, 'scan_interval' => 3600, 'worker_ids' => [$worker->id]])
+        ->assertRedirect();
+
+    expect(Library::where('base_path', $dir)->firstOrFail()->workers->pluck('id')->all())->toBe([$worker->id]);
 });
 
 it('validates required fields on store', function () {
@@ -108,6 +134,7 @@ it('cascades delete to executions when library is deleted', function () {
 });
 
 it('triggers scan', function () {
+    Queue::fake();
     $library = Library::factory()->create();
 
     $this->post("/libraries/{$library->id}/scan")
@@ -117,6 +144,7 @@ it('triggers scan', function () {
         'id' => $library->id,
         'status' => 'pending_scan',
     ]);
+    Queue::assertPushed(ScanLibrary::class);
 });
 
 it('toggles a job on', function () {

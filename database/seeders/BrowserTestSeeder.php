@@ -44,12 +44,16 @@ class BrowserTestSeeder extends Seeder
             ['library_id' => $library->id, 'job_id' => LibraryJobId::CONVERT_SUBTITLE],
         );
 
-        $worker = Worker::firstOrCreate(['name' => 'browser-test-worker']);
+        $worker = Worker::firstOrCreate(
+            ['job_type' => LibraryJobId::TRANSCODE_MEDIA],
+            ['name' => 'Transcode Worker'],
+        );
+        $library->workers()->syncWithoutDetaching([$worker->id]);
 
         Execution::firstOrCreate(
             ['library_job_id' => $transcodeJob->id, 'file_path' => '/tmp/test.mkv'],
             [
-                'worker_id' => (string) $worker->id,
+                'worker_id' => $worker->id,
                 'status' => ExecutionStatus::COMPLETED,
                 'started_at' => now()->subHour(),
                 'finished_at' => now()->subMinutes(30),

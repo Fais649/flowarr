@@ -1,6 +1,16 @@
-import { Head, router } from '@inertiajs/react';
-import { Info } from 'lucide-react';
-import { update } from '@/actions/App/Http/Controllers/WorkersController';
+import { Deferred, Head, Link, router, usePoll } from '@inertiajs/react';
+import { Cpu, Info, Pause, Play, RefreshCw, Square, Tv, X } from 'lucide-react';
+import {
+    clearStreams,
+    pauseAll,
+    refreshCapabilities,
+    startAll,
+    stopAll,
+    update,
+} from '@/actions/App/Http/Controllers/WorkersController';
+import { describePauseReasons } from '@/components/processing-banner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -10,6 +20,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import {
     Tooltip,
@@ -17,49 +28,285 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import AppLayout from '@/layouts/app-layout';
+import { getTooltipText } from '@/lib/worker-tooltips';
 import { dashboard } from '@/routes';
-import { index } from '@/routes/workers';
+import { edit as processingSettings } from '@/routes/config/processing';
+import { index, show } from '@/routes/workers';
+import type {
+    HardwareCapabilities,
+    ProcessingState,
+    Worker,
+} from '@/types/models';
 import { JobTypeLabels } from '@/types/models';
-import type { Worker } from '@/types/models';
 
-function getTooltipText(
-    jobType: string | null | undefined,
-    setting: 'enabled' | 'concurrency' | 'replace_original',
-): string {
-    const jobLabel = jobType ? (JobTypeLabels[jobType] ?? jobType) : 'worker';
+type Stream = {
+    source: string;
+    title: string | null;
+    started_at: number;
+    seen_at: number;
+};
 
-    const tooltips = {
-        transcode_media: {
-            enabled: `Enable or disable video transcoding. When disabled, no videos will be transcoded.`,
-            concurrency: `Number of videos to transcode simultaneously. Higher values process more videos in parallel but use more system resources.`,
-            replace_original: `Replace original video files with transcoded versions. When enabled, the original file is deleted after successful transcoding.`,
-        },
-        extract_subs: {
-            enabled: `Enable or disable subtitle extraction. When disabled, no subtitles will be extracted from videos.`,
-            concurrency: `Number of subtitle extractions to run simultaneously. Higher values process more videos in parallel but use more system resources.`,
-            replace_original: `Remove embedded subtitles from video files after extraction. When enabled, embedded subtitles are stripped from the original video.`,
-        },
-        convert_sub: {
-            enabled: `Enable or disable subtitle format conversion. When disabled, no subtitle files will be converted to SRT format.`,
-            concurrency: `Number of subtitle conversions to run simultaneously. Higher values process more files in parallel but use more system resources.`,
-            replace_original: `Delete original subtitle files after conversion to SRT. When enabled, only the converted SRT file is kept.`,
-        },
+const encoderLabels: Record<string, string> = {
+    hevc_nvenc: 'NVIDIA NVENC',
+    hevc_vaapi: 'VAAPI (AMD / Intel)',
+    libx265: 'libx265 (CPU)',
+};
+
+function ProcessingControls({
+    processing,
+    streams,
+}: {
+    processing: ProcessingState;
+    streams: Stream[];
+}) {
+    const post = (url: string, message?: string) => {
+        if (message && !confirm(message)) {
+            return;
+        }
+
+        router.post(url, {}, { preserveScroll: true });
     };
 
-    const defaultTooltips = {
-        enabled: `Enable or disable this ${jobLabel.toLowerCase()}. When disabled, no jobs of this type will be processed.`,
-        concurrency: `Number of jobs to process simultaneously. Higher values process more items in parallel but use more system resources.`,
-        replace_original: `Replace original files with processed versions. When enabled, original files are deleted after successful processing.`,
-    };
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <CardTitle className="flex items-center gap-2">
+                            Processing
+                            <Badge
+                                variant="outline"
+                                className={
+                                    processing.paused
+                                        ? 'border-orange-300 bg-orange-100 text-orange-800 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                                        : 'border-green-300 bg-green-100 text-green-800 dark:border-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                }
+                            >
+                                {processing.paused ? 'On hold' : 'Running'}
+                            </Badge>
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                            {processing.paused
+                                ? describePauseReasons(processing).join(' ')
+                                : 'Workers pick up queued executions as soon as they are free.'}
+                        </CardDescription>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {processing.manual ? (
+                            <Button
+                                variant="outline"
+                                onClick={() => post(startAll.url())}
+                            >
+                                <Play className="mr-1 size-4" />
+                                Resume all
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="outline"
+                                onClick={() => post(pauseAll.url())}
+                            >
+                                <Pause className="mr-1 size-4" />
+                                Pause all
+                            </Button>
+                        )}
+                        <Button
+                            variant="outline"
+                            onClick={() =>
+                                post(
+                                    stopAll.url(),
+                                    'Stop every queued and running execution?',
+                                )
+                            }
+                        >
+                            <Square className="mr-1 size-4" />
+                            Stop all
+                        </Button>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+                <div className="flex flex-wrap gap-x-6 gap-y-1 text-muted-foreground">
+                    <span>
+                        Processing window:{' '}
+                        <span className="font-medium text-foreground">
+                            {processing.window
+                                ? `${processing.window.start}–${processing.window.end}`
+                                : 'Always'}
+                        </span>
+                    </span>
+                    <Link
+                        href={processingSettings()}
+                        className="underline-offset-4 hover:underline"
+                    >
+                        Configure schedule & notifications
+                    </Link>
+                </div>
 
-    if (jobType && tooltips[jobType as keyof typeof tooltips]) {
-        return tooltips[jobType as keyof typeof tooltips][setting];
-    }
-
-    return defaultTooltips[setting];
+                {streams.length > 0 && (
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-2 font-medium">
+                                <Tv className="size-4" />
+                                Active streams
+                            </span>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                    router.delete(clearStreams.url(), {
+                                        preserveScroll: true,
+                                    })
+                                }
+                                title="Use when a media server missed a stop event"
+                            >
+                                <X className="mr-1 size-3" />
+                                Clear
+                            </Button>
+                        </div>
+                        <ul className="space-y-1">
+                            {streams.map((stream) => (
+                                <li
+                                    key={`${stream.source}-${stream.started_at}-${stream.title}`}
+                                    className="flex items-center justify-between rounded-md border px-3 py-1.5"
+                                >
+                                    <span className="truncate">
+                                        {stream.title ?? 'Unknown item'}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground capitalize">
+                                        {stream.source} · since{' '}
+                                        {new Date(
+                                            stream.started_at * 1000,
+                                        ).toLocaleTimeString()}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
 }
 
-export default function WorkersIndex({ workers }: { workers: Worker[] }) {
+function CapabilitiesCard({
+    capabilities,
+}: {
+    capabilities?: HardwareCapabilities;
+}) {
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex items-center justify-between gap-2">
+                    <div>
+                        <CardTitle className="flex items-center gap-2">
+                            <Cpu className="size-4" />
+                            Hardware acceleration
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                            Encoders and GPUs available to the transcoder.
+                        </CardDescription>
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                            router.post(
+                                refreshCapabilities.url(),
+                                {},
+                                { preserveScroll: true },
+                            )
+                        }
+                    >
+                        <RefreshCw className="mr-1 size-3" />
+                        Re-detect
+                    </Button>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <Deferred
+                    data="capabilities"
+                    fallback={
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-1/2" />
+                            <Skeleton className="h-4 w-2/3" />
+                        </div>
+                    }
+                >
+                    {capabilities && (
+                        <div className="space-y-3 text-sm">
+                            {capabilities.ffmpeg_version === null ? (
+                                <p className="text-destructive">
+                                    ffmpeg was not found. Transcoding and
+                                    subtitle jobs will fail.
+                                </p>
+                            ) : (
+                                <p>
+                                    Transcodes use{' '}
+                                    <span className="font-medium">
+                                        {encoderLabels[
+                                            capabilities.selected_encoder ?? ''
+                                        ] ?? capabilities.selected_encoder}
+                                    </span>{' '}
+                                    <span className="text-muted-foreground">
+                                        (mode: {capabilities.mode}, ffmpeg{' '}
+                                        {capabilities.ffmpeg_version})
+                                    </span>
+                                </p>
+                            )}
+                            <div className="flex flex-wrap gap-2">
+                                {Object.entries(capabilities.encoders).map(
+                                    ([encoder, available]) => (
+                                        <Badge
+                                            key={encoder}
+                                            variant={
+                                                available
+                                                    ? 'secondary'
+                                                    : 'outline'
+                                            }
+                                            className={
+                                                available
+                                                    ? ''
+                                                    : 'text-muted-foreground line-through'
+                                            }
+                                        >
+                                            {encoderLabels[encoder] ?? encoder}
+                                        </Badge>
+                                    ),
+                                )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                NVIDIA device:{' '}
+                                {capabilities.devices.nvidia
+                                    ? 'detected'
+                                    : 'not found'}{' '}
+                                · VAAPI device ({capabilities.vaapi_device}):{' '}
+                                {capabilities.devices.vaapi
+                                    ? 'detected'
+                                    : 'not found'}
+                            </p>
+                        </div>
+                    )}
+                </Deferred>
+            </CardContent>
+        </Card>
+    );
+}
+
+export default function WorkersIndex({
+    workers,
+    maxConcurrency,
+    processing,
+    streams,
+    capabilities,
+}: {
+    workers: Worker[];
+    maxConcurrency: number;
+    processing: ProcessingState;
+    streams: Stream[];
+    capabilities?: HardwareCapabilities;
+}) {
+    usePoll(5000, { only: ['workers', 'processing', 'streams'] });
+
     const handleUpdate = (
         worker: Worker,
         data: Record<string, string | number | boolean>,
@@ -75,16 +322,30 @@ export default function WorkersIndex({ workers }: { workers: Worker[] }) {
             <div className="flex h-full flex-1 flex-col gap-6 p-4">
                 <h1 className="text-2xl font-bold">Workers</h1>
 
+                <div className="grid gap-4 lg:grid-cols-2">
+                    <ProcessingControls
+                        processing={processing}
+                        streams={streams}
+                    />
+                    <CapabilitiesCard capabilities={capabilities} />
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-3">
                     {workers.map((worker) => (
                         <Card key={worker.id}>
                             <CardHeader className="pb-3">
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-base">
-                                        {worker.job_type
-                                            ? (JobTypeLabels[worker.job_type] ??
-                                              worker.job_type)
-                                            : worker.name}
+                                        <Link
+                                            href={show(worker.id)}
+                                            className="hover:underline"
+                                        >
+                                            {worker.job_type
+                                                ? (JobTypeLabels[
+                                                      worker.job_type
+                                                  ] ?? worker.job_type)
+                                                : worker.name}
+                                        </Link>
                                     </CardTitle>
                                     <div className="flex items-center gap-2">
                                         <Tooltip>
@@ -110,6 +371,13 @@ export default function WorkersIndex({ workers }: { workers: Worker[] }) {
                                 </div>
                                 <CardDescription>
                                     {worker.enabled ? 'Active' : 'Disabled'}
+                                    {' · '}
+                                    {worker.processing_count ?? 0} running,{' '}
+                                    {worker.queued_count ?? 0} queued
+                                    {worker.running_processes !== null &&
+                                        worker.running_processes !==
+                                            undefined &&
+                                        ` · ${worker.running_processes}/${worker.enabled ? worker.concurrency : 0} processes up`}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -131,9 +399,10 @@ export default function WorkersIndex({ workers }: { workers: Worker[] }) {
                                         </Tooltip>
                                     </div>
                                     <Input
+                                        key={`${worker.id}-${worker.concurrency}`}
                                         type="number"
                                         min={1}
-                                        max={99}
+                                        max={maxConcurrency}
                                         defaultValue={worker.concurrency}
                                         disabled={!worker.enabled}
                                         onBlur={(e) => {
@@ -141,7 +410,7 @@ export default function WorkersIndex({ workers }: { workers: Worker[] }) {
 
                                             if (
                                                 val >= 1 &&
-                                                val <= 99 &&
+                                                val <= maxConcurrency &&
                                                 val !== worker.concurrency
                                             ) {
                                                 handleUpdate(worker, {
@@ -163,7 +432,7 @@ export default function WorkersIndex({ workers }: { workers: Worker[] }) {
                                             <TooltipTrigger asChild>
                                                 <Info className="size-3 cursor-help text-muted-foreground" />
                                             </TooltipTrigger>
-                                            <TooltipContent>
+                                            <TooltipContent className="max-w-xs">
                                                 {getTooltipText(
                                                     worker.job_type,
                                                     'replace_original',

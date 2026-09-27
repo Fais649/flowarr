@@ -1,18 +1,27 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePoll } from '@inertiajs/react';
 import { DateText } from '@/components/date-text';
 import { EmptyState } from '@/components/empty-state';
 import { MetricCard } from '@/components/metric-card';
+import { ProcessingBanner } from '@/components/processing-banner';
+import { ProgressBar } from '@/components/progress-bar';
 import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatDuration } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { show as showExecution } from '@/routes/executions';
 import { create, show } from '@/routes/libraries';
+import type { ExecutionStatus, ProcessingState } from '@/types/models';
+import { JobTypeLabels } from '@/types/models';
 
 type ProcessingExecution = {
     id: number;
     file_path: string;
+    status: ExecutionStatus;
     job_type: string;
     library: string;
+    progress: number | null;
+    message: string | null;
     started_at: string | null;
     duration: number | null;
 };
@@ -24,6 +33,7 @@ type QueuedByType = {
 
 export default function Dashboard({
     metrics,
+    processing,
     processingExecutions,
     queuedByType,
     recentExecutions,
@@ -33,14 +43,16 @@ export default function Dashboard({
         libraryCount: number;
         pendingExecutions: number;
         failedToday: number;
+        completedToday?: number;
         processingCount: number;
     };
+    processing?: ProcessingState;
     processingExecutions: ProcessingExecution[];
     queuedByType: QueuedByType[];
     recentExecutions: {
         id: number;
         file_path: string;
-        status: string;
+        status: ExecutionStatus;
         library: string;
         job_type: string;
         created_at: string;
@@ -53,10 +65,23 @@ export default function Dashboard({
         last_scan: string | null;
     }[];
 }) {
+    usePoll(5000, {
+        only: [
+            'metrics',
+            'processing',
+            'processingExecutions',
+            'queuedByType',
+            'recentExecutions',
+            'libraries',
+        ],
+    });
+
     return (
         <>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
+                <ProcessingBanner processing={processing} />
+
                 <div className="grid auto-rows-min gap-4 md:grid-cols-4">
                     <MetricCard
                         label="Libraries"
@@ -74,10 +99,10 @@ export default function Dashboard({
                         label="Failed Today"
                         value={metrics.failedToday}
                         trend={
-                            metrics.failedToday > 0
+                            metrics.completedToday
                                 ? {
-                                      value: `${metrics.failedToday} failures`,
-                                      positive: false,
+                                      value: `${metrics.completedToday} completed`,
+                                      positive: true,
                                   }
                                 : undefined
                         }
@@ -92,7 +117,7 @@ export default function Dashboard({
                         {processingExecutions.length === 0 ? (
                             <div className="space-y-2">
                                 <p className="text-sm text-muted-foreground">
-                                    No active workers.
+                                    Nothing is being processed right now.
                                 </p>
                                 {queuedByType.length > 0 && (
                                     <div className="flex flex-wrap gap-2">
@@ -101,7 +126,9 @@ export default function Dashboard({
                                                 key={qt.job_type}
                                                 variant="secondary"
                                             >
-                                                {qt.job_type}: {qt.count} queued
+                                                {JobTypeLabels[qt.job_type] ??
+                                                    qt.job_type}
+                                                : {qt.count} queued
                                             </Badge>
                                         ))}
                                     </div>
@@ -112,21 +139,63 @@ export default function Dashboard({
                                 {processingExecutions.map((exec) => (
                                     <div
                                         key={exec.id}
-                                        className="flex items-center justify-between border-b pb-2 last:border-0"
+                                        className="space-y-2 border-b pb-3 last:border-0"
                                     >
-                                        <div className="min-w-0 flex-1">
-                                            <p className="truncate text-sm font-medium">
-                                                {exec.file_path}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {exec.library} / {exec.job_type}
-                                                {exec.duration !== null &&
-                                                    ` · ${exec.duration}m`}
-                                            </p>
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div className="min-w-0 flex-1">
+                                                <Link
+                                                    href={showExecution(
+                                                        exec.id,
+                                                    )}
+                                                    className="block truncate text-sm font-medium hover:underline"
+                                                >
+                                                    {exec.file_path}
+                                                </Link>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {exec.library} /{' '}
+                                                    {JobTypeLabels[
+                                                        exec.job_type
+                                                    ] ?? exec.job_type}
+                                                    {exec.duration !== null &&
+                                                        ` · ${formatDuration(exec.duration)}`}
+                                                    {exec.message &&
+                                                        ` · ${exec.message}`}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {exec.progress !== null && (
+                                                    <span className="text-xs text-muted-foreground tabular-nums">
+                                                        {exec.progress.toFixed(
+                                                            0,
+                                                        )}
+                                                        %
+                                                    </span>
+                                                )}
+                                                <StatusBadge
+                                                    status={exec.status}
+                                                />
+                                            </div>
                                         </div>
-                                        <StatusBadge status="processing" />
+                                        <ProgressBar
+                                            value={exec.progress}
+                                            paused={exec.status === 'paused'}
+                                        />
                                     </div>
                                 ))}
+                                {queuedByType.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {queuedByType.map((qt) => (
+                                            <Badge
+                                                key={qt.job_type}
+                                                variant="secondary"
+                                            >
+                                                {JobTypeLabels[qt.job_type] ??
+                                                    qt.job_type}
+                                                : {qt.count} queued
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </CardContent>
@@ -161,12 +230,19 @@ export default function Dashboard({
                                                 className="flex items-center justify-between border-b pb-2 last:border-0"
                                             >
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="truncate text-sm font-medium">
+                                                    <Link
+                                                        href={showExecution(
+                                                            exec.id,
+                                                        )}
+                                                        className="block truncate text-sm font-medium hover:underline"
+                                                    >
                                                         {exec.file_path}
-                                                    </p>
+                                                    </Link>
                                                     <p className="text-xs text-muted-foreground">
                                                         {exec.library} /{' '}
-                                                        {exec.job_type}
+                                                        {JobTypeLabels[
+                                                            exec.job_type
+                                                        ] ?? exec.job_type}
                                                     </p>
                                                 </div>
                                                 <div className="ml-4 flex items-center gap-2">
@@ -205,7 +281,7 @@ export default function Dashboard({
                                                     {lib.base_path}
                                                 </Link>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {lib.enabled_jobs} jobs
+                                                    {lib.enabled_jobs} workers
                                                     enabled
                                                 </p>
                                             </div>

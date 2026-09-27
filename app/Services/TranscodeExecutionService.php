@@ -3,26 +3,42 @@
 namespace App\Services;
 
 use Symfony\Component\Process\Process;
+use Throwable;
 
 class TranscodeExecutionService extends ProcessExecutionService
 {
-    private const HDR_FILTER = 'zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p';
+    /** Tonemaps HDR (PQ/HLG) to SDR bt709 so HEVC output plays correctly on SDR clients. */
+    public const HDR_FILTER = 'zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p';
 
     protected function buildProcess(): Process
     {
-        $mode = config('services.ffmpeg.enable_gpu_transcoding', true) ? 'auto' : 'software';
         $replaceOriginal = $this->execution->worker?->replace_original ? 'true' : 'false';
 
-        $command = [
-            './scripts/transcode_media.sh',
+        return new Process([
+            $this->script('transcode_media.sh'),
             $this->execution->file_path,
             $replaceOriginal,
-            $mode,
-        ];
+            HardwareCapabilities::configuredMode(),
+            $this->videoFilter(),
+        ], base_path());
+    }
 
-        $process = new Process($command);
-        $process->setTimeout(null);
+    private function videoFilter(): string
+    {
+        $override = config('services.ffmpeg.video_filter');
 
-        return $process;
+        try {
+            $probe = app(MediaProbeService::class)->probe($this->execution->file_path);
+            $this->durationSeconds = $probe->duration();
+            $isHdr = $probe->isHdr();
+        } catch (Throwable) {
+            $isHdr = false;
+        }
+
+        if (is_string($override) && $override !== '') {
+            return $override;
+        }
+
+        return $isHdr ? self::HDR_FILTER : '';
     }
 }

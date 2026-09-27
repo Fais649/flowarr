@@ -21,6 +21,7 @@ vi.mock('@inertiajs/react', () => ({
         flushAll: vi.fn(),
         visit: vi.fn(),
     },
+    usePoll: vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
     useHttp: () => ({
         data: { name: '', email: '', password: '', password_confirmation: '' },
         setData: vi.fn(),
@@ -135,7 +136,7 @@ describe('Dashboard', () => {
         processingExecutions: [],
         queuedByType: [],
         recentExecutions: [
-            { id: 1, file_path: '/movies/test.mp4', status: 'completed', library: 'Movies', job_type: 'transcode', created_at: '2026-07-26T10:00:00Z' },
+            { id: 1, file_path: '/movies/test.mp4', status: 'completed' as const, library: 'Movies', job_type: 'transcode_media', created_at: '2026-07-26T10:00:00Z' },
         ],
         libraries: [
             { id: 1, base_path: '/media/movies', status: 'active', enabled_jobs: 3, last_scan: '2026-07-25T10:00:00Z' },
@@ -156,6 +157,31 @@ describe('Dashboard', () => {
     it('renders library health', () => {
         render(<Dashboard {...baseProps} />);
         expect(screen.getByText('Library Health')).toBeInTheDocument();
+    });
+
+    it('renders progress for running executions', () => {
+        render(
+            <Dashboard
+                {...baseProps}
+                processingExecutions={[
+                    { id: 2, file_path: '/movies/big.mkv', status: 'processing', job_type: 'transcode_media', library: 'Movies', progress: 42, message: null, started_at: '2026-07-26T10:00:00Z', duration: 90 },
+                ]}
+            />,
+        );
+        expect(screen.getByText('/movies/big.mkv')).toBeInTheDocument();
+        expect(screen.getByText('42%')).toBeInTheDocument();
+        expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42');
+    });
+
+    it('explains why processing is on hold', () => {
+        render(
+            <Dashboard
+                {...baseProps}
+                processing={{ paused: true, reasons: ['streams'], manual: false, active_streams: 2, window: null }}
+            />,
+        );
+        expect(screen.getByText('Processing is on hold')).toBeInTheDocument();
+        expect(screen.getByText(/2 active streams on your media server/)).toBeInTheDocument();
     });
 
     it('renders empty state when no libraries', () => {

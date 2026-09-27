@@ -7,25 +7,17 @@ use Symfony\Component\Process\Process;
 
 class ExtractSubtitlesExecutionService extends ProcessExecutionService
 {
-    private const TEXT_BASED_CODECS = [
-        'subrip',
-        'srt',
-        'ass',
-        'ssa',
-        'webvtt',
-    ];
-
     protected function buildProcess(): Process
     {
-        $extractCommand = array_merge(
-            ['./scripts/extract_subtitles.sh', $this->execution->file_path, $this->targetVideoPath()],
-            self::TEXT_BASED_CODECS
-        );
+        $stripEmbedded = $this->execution->worker?->replace_original ? 'true' : 'false';
 
-        $process = new Process($extractCommand);
-        $process->setTimeout(null);
-
-        return $process;
+        return new Process([
+            $this->script('extract_subtitles.sh'),
+            $this->execution->file_path,
+            $this->targetVideoPath(),
+            $stripEmbedded,
+            ...MediaProbeService::TEXT_SUBTITLE_CODECS,
+        ], base_path());
     }
 
     /**
@@ -34,10 +26,12 @@ class ExtractSubtitlesExecutionService extends ProcessExecutionService
      */
     private function targetVideoPath(): string
     {
-        $transcodeWorker = $this->execution->libraryJob->library->workers
+        $library = $this->execution->libraryJob?->library;
+        $transcodeWorker = $library?->workers
+            ->where('enabled', true)
             ->firstWhere('job_type', LibraryJobId::TRANSCODE_MEDIA);
 
-        if ($transcodeWorker === null || $transcodeWorker->replace_original) {
+        if ($transcodeWorker === null) {
             return $this->execution->file_path;
         }
 
@@ -45,13 +39,13 @@ class ExtractSubtitlesExecutionService extends ProcessExecutionService
             $result = app(MediaProbeService::class)->probe($this->execution->file_path);
             $needsTranscode = $result->isVideo() && ! $result->isTargetVideoEncoding();
         } catch (\Throwable) {
-            $needsTranscode = true;
+            $needsTranscode = false;
         }
 
         if (! $needsTranscode) {
             return $this->execution->file_path;
         }
 
-        return preg_replace('/\.[^.]+$/', '_hevc.mkv', $this->execution->file_path);
+        return TranscodeOutput::pathFor($this->execution->file_path, $transcodeWorker->replace_original);
     }
 }

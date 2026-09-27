@@ -4,8 +4,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DebugController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\ExecutionsController;
-use App\Http\Controllers\JellyfinWebhookController;
 use App\Http\Controllers\LibrariesController;
+use App\Http\Controllers\MediaServerWebhookController;
 use App\Http\Controllers\WorkersController;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +23,11 @@ Route::get('/', function () {
     return inertia('welcome');
 })->name('home');
 
-Route::post('/webhooks/jellyfin', JellyfinWebhookController::class);
+Route::controller(MediaServerWebhookController::class)->prefix('webhooks')->name('webhooks.')->middleware('throttle:120,1')->group(function () {
+    Route::post('jellyfin', 'jellyfin')->name('jellyfin');
+    Route::post('plex', 'plex')->name('plex');
+    Route::post('emby', 'emby')->name('emby');
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -38,6 +42,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::controller(ExecutionsController::class)->prefix('executions')->name('executions.')->group(function () {
         Route::post('batch/start', 'batchStart')->name('batch.start');
+        Route::post('batch/retry', 'batchRetry')->name('batch.retry');
         Route::post('batch/pause', 'batchPause')->name('batch.pause');
         Route::post('batch/resume', 'batchResume')->name('batch.resume');
         Route::post('batch/stop', 'batchStop')->name('batch.stop');
@@ -61,6 +66,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('pause-all', 'pauseAll')->name('pause-all');
         Route::post('resume-all', 'resumeAll')->name('resume-all');
         Route::post('stop-all', 'stopAll')->name('stop-all');
+        Route::post('capabilities/refresh', 'refreshCapabilities')->name('capabilities.refresh');
+        Route::delete('streams', 'clearStreams')->name('streams.clear');
 
         Route::post('{worker}/start', 'start')->name('start');
         Route::post('{worker}/pause', 'pause')->name('pause');

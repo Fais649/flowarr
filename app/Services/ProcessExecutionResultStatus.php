@@ -6,4 +6,5 @@ enum ProcessExecutionResultStatus
 {
     case SUCCESS;
     case FAILED;
+    case STOPPED;
 }

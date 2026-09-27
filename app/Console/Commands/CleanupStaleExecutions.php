@@ -10,7 +10,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('scan:cleanup')]
-#[Description('Delete QUEUED execution records for files that are not actually media files.')]
+#[Description('Delete QUEUED execution records for files that are missing or not media files.')]
 class CleanupStaleExecutions extends Command
 {
     /**
@@ -26,26 +26,21 @@ class CleanupStaleExecutions extends Command
         $deleted = 0;
 
         Execution::where('status', ExecutionStatus::QUEUED)
-            ->chunk(100, function ($executions) use ($allowedExts, &$deleted): void {
+            ->chunkById(100, function ($executions) use ($allowedExts, &$deleted): void {
                 foreach ($executions as $execution) {
                     $ext = strtolower(pathinfo($execution->file_path, PATHINFO_EXTENSION));
-                    $filename = pathinfo($execution->file_path, PATHINFO_FILENAME);
 
-                    // Delete if extension is not in allowlist
-                    if (! in_array($ext, $allowedExts, true)) {
+                    $reason = match (true) {
+                        ! in_array($ext, $allowedExts, true) => 'bad ext',
+                        str_ends_with(strtolower($execution->file_path), '.d.ts') => 'declaration file',
+                        ! file_exists($execution->file_path) => 'missing file',
+                        default => null,
+                    };
+
+                    if ($reason !== null) {
                         $execution->delete();
                         $deleted++;
-                        $this->line("Deleted [bad ext]: {$execution->file_path}");
-
-                        continue;
-                    }
-
-                    // Delete if filename itself contains a dot (double-extension like .d.ts)
-                    // Real media files have a single extension: video.ts, movie.mkv
-                    if (str_contains($filename, '.')) {
-                        $execution->delete();
-                        $deleted++;
-                        $this->line("Deleted [dotted name]: {$execution->file_path}");
+                        $this->line("Deleted [{$reason}]: {$execution->file_path}");
                     }
                 }
             });
