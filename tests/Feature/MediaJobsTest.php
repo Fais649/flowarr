@@ -253,3 +253,17 @@ it('produces capped scaled copies without changing the source', function () {
         ->and((float) $data['format']['size'] * 8 / (float) $data['format']['duration'])->toBeLessThanOrEqual(12000000)
         ->and(collect($data['streams'])->where('codec_type', 'subtitle'))->toHaveCount(1);
 });
+
+it('refuses to overwrite an existing separate transcode', function () {
+    $source = $this->mediaDir.'/collision.mkv';
+    makeVideo($source);
+    File::put($this->mediaDir.'/collision_hevc.mkv', 'keep this output');
+    $hash = hash_file('sha256', $source);
+    $execution = executionFor($this->library, LibraryJobId::TRANSCODE_MEDIA, $source);
+
+    TranscodeMedia::dispatchSync($execution);
+
+    expect($execution->refresh()->status)->toBe(ExecutionStatus::FAILED)
+        ->and(hash_file('sha256', $source))->toBe($hash)
+        ->and(File::get($this->mediaDir.'/collision_hevc.mkv'))->toBe('keep this output');
+});
