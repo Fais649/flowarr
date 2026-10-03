@@ -20,6 +20,7 @@ class TranscodeExecutionService extends ProcessExecutionService
             $replaceOriginal,
             HardwareCapabilities::configuredMode(),
             $this->videoFilter(),
+            (string) config('services.ffmpeg.max_bitrate', 0),
         ], base_path());
     }
 
@@ -35,10 +36,14 @@ class TranscodeExecutionService extends ProcessExecutionService
             $isHdr = false;
         }
 
-        if (is_string($override) && $override !== '') {
-            return $override;
+        $filter = is_string($override) && $override !== '' ? $override : ($isHdr ? self::HDR_FILTER : '');
+        $width = (int) config('services.ffmpeg.max_width');
+        $height = (int) config('services.ffmpeg.max_height');
+        if ($width > 0 && $height > 0) {
+            $scale = "scale=w='min({$width},iw)':h='min({$height},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2";
+            $filter = $filter !== '' ? $filter.','.$scale : $scale;
         }
 
-        return $isHdr ? self::HDR_FILTER : '';
+        return $filter;
     }
 }

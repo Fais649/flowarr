@@ -41,6 +41,9 @@ return [
         // auto | nvidia | amd | software — auto picks NVENC, then VAAPI, then libx265
         'hw_mode' => env('TRANSCODE_HW_MODE', 'auto'),
         'vaapi_device' => env('VAAPI_DEVICE', '/dev/dri/renderD128'),
+        'max_bitrate' => (int) env('TRANSCODE_MAX_BITRATE', 0),
+        'max_width' => (int) env('TRANSCODE_MAX_WIDTH', 0),
+        'max_height' => (int) env('TRANSCODE_MAX_HEIGHT', 0),
         'video_filter' => env('FFMPEG_VIDEO_FILTER'), // null = tonemap HDR sources, leave SDR untouched
     ],
 

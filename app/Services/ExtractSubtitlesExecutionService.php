@@ -37,7 +37,7 @@ class ExtractSubtitlesExecutionService extends ProcessExecutionService
 
         try {
             $result = app(MediaProbeService::class)->probe($this->execution->file_path);
-            $needsTranscode = $result->isVideo() && ! $result->isTargetVideoEncoding();
+            $needsTranscode = $result->isVideo() && ((config('services.ffmpeg.max_bitrate') > 0 || config('services.ffmpeg.max_width') > 0 || config('services.ffmpeg.max_height') > 0) ? $result->exceedsTranscodeLimits() : ! $result->isTargetVideoEncoding());
         } catch (\Throwable) {
             $needsTranscode = false;
         }

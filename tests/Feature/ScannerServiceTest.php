@@ -140,3 +140,30 @@ it('re-evaluates a file that changed since its last execution', function () {
     expect(scan($this->library))->toBe(1)
         ->and(executionsFor(LibraryJobId::TRANSCODE_MEDIA))->toHaveCount(2);
 });
+
+it('queues oversized hevc when resolution limits are configured', function () {
+    config(['services.ffmpeg.max_width' => 32, 'services.ffmpeg.max_height' => 32]);
+    exec('ffmpeg -loglevel error -y -f lavfi -i testsrc=s=64x64:d=1 -c:v libx265 '.escapeshellarg($this->mediaDir.'/oversized.mkv'));
+
+    scan($this->library);
+
+    expect(executionsFor(LibraryJobId::TRANSCODE_MEDIA))->toHaveCount(1);
+});
+
+it('leaves suitable h264 untouched when capped processing is configured', function () {
+    config(['services.ffmpeg.max_bitrate' => 12000000, 'services.ffmpeg.max_width' => 1920, 'services.ffmpeg.max_height' => 1080]);
+    h264($this->mediaDir.'/suitable.mkv');
+
+    scan($this->library);
+
+    expect(executionsFor(LibraryJobId::TRANSCODE_MEDIA))->toHaveCount(0);
+});
+
+it('queues videos above the configured total bitrate regardless of codec', function () {
+    config(['services.ffmpeg.max_bitrate' => 1]);
+    exec('ffmpeg -loglevel error -y -f lavfi -i testsrc=s=64x64:d=1 -c:v libx265 '.escapeshellarg($this->mediaDir.'/high-rate.mkv'));
+
+    scan($this->library);
+
+    expect(executionsFor(LibraryJobId::TRANSCODE_MEDIA))->toHaveCount(1);
+});

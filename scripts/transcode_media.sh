@@ -14,6 +14,8 @@ FILE_PATH="$1"
 REPLACE_ORIGINAL="${2:-false}"
 MODE="${3:-auto}"
 VIDEO_FILTER="${4:-}"
+MAX_BITRATE="${5:-0}"
+FFPROBE_BIN="${FFPROBE_BIN:-ffprobe}"
 
 FFMPEG_BIN="${FFMPEG_BIN:-ffmpeg}"
 VAAPI_DEVICE="${VAAPI_DEVICE:-/dev/dri/renderD128}"
@@ -28,16 +30,18 @@ else
     FINAL_OUTPUT="${BASE_PATH}_hevc.mkv"
 fi
 
-if [ "$REPLACE_ORIGINAL" = "true" ] && [ "$FINAL_OUTPUT" != "$FILE_PATH" ] && [ -e "$FINAL_OUTPUT" ]; then
+if [ "$FINAL_OUTPUT" != "$FILE_PATH" ] && [ -e "$FINAL_OUTPUT" ]; then
     echo "Refusing to overwrite existing file: $FINAL_OUTPUT" >&2
     exit 1
 fi
 
-trap 'rm -f "$TEMP_OUTPUT"' EXIT
+SOURCE_FINGERPRINT=$(stat -c "%s:%Y:%i" "$FILE_PATH")
+
+trap 'rm -f "$TEMP_OUTPUT" "$TEMP_OUTPUT.source.json" "$TEMP_OUTPUT.output.json"' EXIT
 trap 'exit 143' TERM INT
 
 has_encoder() {
-    "$FFMPEG_BIN" -hide_banner -encoders 2>/dev/null | grep -qw "$1"
+    "$FFMPEG_BIN" -hide_banner -encoders 2>/dev/null | grep -w "$1" >/dev/null
 }
 
 detect_gpu() {
@@ -81,6 +85,32 @@ case "$GPU" in
 esac
 
 SOFTWARE_ARGS=(-c:v libx265 -preset medium -crf 28)
+RATE_ARGS=()
+if [ "$MAX_BITRATE" -gt 0 ]; then
+    AUDIO_BITRATE=$("$FFPROBE_BIN" -v error -show_streams -of json "$FILE_PATH" | php -r '
+        $data = json_decode(stream_get_contents(STDIN), true, flags: JSON_THROW_ON_ERROR);
+        $total = 0;
+        foreach ($data["streams"] as $stream) {
+            if ($stream["codec_type"] !== "audio") { continue; }
+            $rate = $stream["bit_rate"] ?? $stream["tags"]["BPS"] ?? $stream["tags"]["BPS-eng"] ?? null;
+            if (!is_numeric($rate) || $rate <= 0) { fwrite(STDERR, "Unknown audio bitrate; refusing capped encode\n"); exit(1); }
+            $total += (int) $rate;
+        }
+        echo $total;
+    ')
+    VIDEO_MAX=$((MAX_BITRATE - AUDIO_BITRATE - 500000))
+    if [ "$VIDEO_MAX" -lt 1000000 ]; then
+        echo "Audio tracks leave insufficient video bitrate budget" >&2
+        exit 1
+    fi
+    VIDEO_TARGET=$((VIDEO_MAX * 3 / 4))
+    RATE_ARGS=(-b:v "$VIDEO_TARGET" -maxrate "$VIDEO_MAX" -bufsize "$((VIDEO_MAX * 2))")
+    if [ "$GPU" = "amd" ] && [ ${#ENCODE_ARGS[@]} -gt 0 ]; then
+        ENCODE_ARGS=(-c:v hevc_vaapi -rc_mode VBR)
+    elif [ "$GPU" = "nvidia" ] && [ ${#ENCODE_ARGS[@]} -gt 0 ]; then
+        ENCODE_ARGS=(-c:v hevc_nvenc -preset p4 -rc vbr)
+    fi
+fi
 
 if [ ${#ENCODE_ARGS[@]} -eq 0 ]; then
     GPU="none"
@@ -121,6 +151,8 @@ encode() {
         "${stream_args[@]}" \
         ${filter_args[@]+"${filter_args[@]}"} \
         "$@" \
+        ${RATE_ARGS[@]+"${RATE_ARGS[@]}"} \
+        -map_metadata 0 -map_chapters 0 \
         -c:a copy \
         -max_muxing_queue_size 4096 \
         "$TEMP_OUTPUT"
@@ -134,6 +166,10 @@ if ! encode true "$FILTER" ${HW_ARGS[@]+"${HW_ARGS[@]}"} -- "${ENCODE_ARGS[@]}";
     fi
 
     if [ "$GPU" = "none" ] || ! encode true "$VIDEO_FILTER" -- "${SOFTWARE_ARGS[@]}"; then
+        if [ "$MAX_BITRATE" -gt 0 ]; then
+            echo "Capped encode failed; refusing to drop tracks or filters" >&2
+            exit 1
+        fi
         echo "Encoding with all streams failed, retrying without subtitles and attachments" >&2
 
         if ! encode false "$VIDEO_FILTER" -- "${SOFTWARE_ARGS[@]}"; then
@@ -152,6 +188,18 @@ if [ ! -s "$TEMP_OUTPUT" ]; then
     exit 1
 fi
 
+# Validate duration, track counts and total bitrate before committing the output.
+"$FFPROBE_BIN" -v error -show_format -show_streams -of json "$FILE_PATH" > "$TEMP_OUTPUT.source.json"
+"$FFPROBE_BIN" -v error -show_format -show_streams -of json "$TEMP_OUTPUT" > "$TEMP_OUTPUT.output.json"
+php "$(dirname "$0")/validate_transcode.php" "$TEMP_OUTPUT.source.json" "$TEMP_OUTPUT.output.json" "$MAX_BITRATE"
+rm -f "$TEMP_OUTPUT.source.json" "$TEMP_OUTPUT.output.json"
+if [ "$REPLACE_ORIGINAL" = "true" ]; then
+    "$FFMPEG_BIN" -v error -xerror -nostdin -i "$TEMP_OUTPUT" -map 0:v -map '0:a?' -f null -
+fi
+if [ "$(stat -c "%s:%Y:%i" "$FILE_PATH")" != "$SOURCE_FINGERPRINT" ]; then
+    echo "Source changed during encoding; refusing replacement" >&2
+    exit 1
+fi
 mv "$TEMP_OUTPUT" "$FINAL_OUTPUT"
 
 if [ "$REPLACE_ORIGINAL" = "true" ] && [ "$FINAL_OUTPUT" != "$FILE_PATH" ]; then

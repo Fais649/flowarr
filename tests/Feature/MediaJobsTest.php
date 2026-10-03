@@ -232,3 +232,24 @@ it('never lets the queue worker time out long media jobs', function () {
 
     expect($job->timeout)->toBe(0)->and($job->tries)->toBe(1);
 });
+
+it('produces capped scaled copies without changing the source', function () {
+    config(['services.ffmpeg.max_bitrate' => 12000000, 'services.ffmpeg.max_width' => 80, 'services.ffmpeg.max_height' => 60]);
+    $source = $this->mediaDir.'/capped.mkv';
+    makeVideo($source, withSubtitles: true);
+    $before = hash_file('sha256', $source);
+    $execution = executionFor($this->library, LibraryJobId::TRANSCODE_MEDIA, $source);
+
+    TranscodeMedia::dispatchSync($execution);
+
+    expect($execution->refresh()->status)->toBe(ExecutionStatus::COMPLETED)
+        ->and(hash_file('sha256', $source))->toBe($before);
+    $process = new Process(['ffprobe', '-v', 'error', '-show_format', '-show_streams', '-of', 'json', $this->mediaDir.'/capped_hevc.mkv']);
+    $process->mustRun();
+    $data = json_decode($process->getOutput(), true);
+    $video = collect($data['streams'])->firstWhere('codec_type', 'video');
+    expect($video['width'])->toBeLessThanOrEqual(80)
+        ->and($video['height'])->toBeLessThanOrEqual(60)
+        ->and((float) $data['format']['size'] * 8 / (float) $data['format']['duration'])->toBeLessThanOrEqual(12000000)
+        ->and(collect($data['streams'])->where('codec_type', 'subtitle'))->toHaveCount(1);
+});
