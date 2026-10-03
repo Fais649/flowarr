@@ -21,6 +21,9 @@ class LibraryResource extends JsonResource
             'id' => $this->id,
             'base_path' => $this->base_path,
             'status' => $this->status->value,
+            'original_handling' => $this->original_handling,
+            'replacement_start' => $this->replacement_start,
+            'replacement_end' => $this->replacement_end,
             'scan_interval' => $this->scan_interval,
             'last_scan' => $this->last_scan?->toIso8601String(),
             'jobs' => $this->whenLoaded('workers', fn () => $this->workers

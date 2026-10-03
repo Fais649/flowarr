@@ -37,6 +37,7 @@ class MediaProbeService
             ->all();
 
         $bitsPerRawSample = $firstVideo?->get('bits_per_raw_sample');
+        $duration = $this->duration($filePath);
 
         return new MediaProbeResult(
             fileExtension: $extension,
@@ -45,8 +46,11 @@ class MediaProbeService
             colorTransfer: $firstVideo?->get('color_transfer'),
             bitsPerRawSample: $bitsPerRawSample !== null ? (int) $bitsPerRawSample : null,
             subtitleCodecs: $subtitleCodecs,
-            duration: $this->duration($filePath),
+            duration: $duration,
             colorPrimaries: $firstVideo?->get('color_primaries'),
+            width: $firstVideo?->get('width'),
+            height: $firstVideo?->get('height'),
+            bitrate: $duration > 0 ? filesize($filePath) * 8 / $duration : null,
         );
     }
 

@@ -11,6 +11,9 @@ trait LibraryValidationRules
     {
         return [
             'base_path' => ['required', 'string', $this->existsAndReadable()],
+            'original_handling' => ['sometimes', 'nullable', 'in:keep,immediate,idle,window'],
+            'replacement_start' => ['nullable', 'required_if:original_handling,window', 'date_format:H:i'],
+            'replacement_end' => ['nullable', 'required_if:original_handling,window', 'date_format:H:i', 'different:replacement_start'],
             'scan_interval' => ['required', 'integer', 'min:60'],
         ];
     }

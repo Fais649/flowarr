@@ -196,7 +196,15 @@ class ScannerService
 
         $result = $probe ??= $this->probe($filePath);
 
-        return $result !== null && $result->isVideo() && ! $result->isTargetVideoEncoding();
+        if ($result === null || ! $result->isVideo()) {
+            return false;
+        }
+
+        if (config('services.ffmpeg.max_bitrate') > 0 || config('services.ffmpeg.max_width') > 0 || config('services.ffmpeg.max_height') > 0) {
+            return $result->exceedsTranscodeLimits();
+        }
+
+        return ! $result->isTargetVideoEncoding();
     }
 
     private function hasExtractableSubtitles(string $filePath, ?MediaProbeResult &$probe): bool

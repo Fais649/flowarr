@@ -17,6 +17,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property string $base_path
  * @property LibraryStatus $status
+ * @property string|null $original_handling
+ * @property string|null $replacement_start
+ * @property string|null $replacement_end
  * @property int $scan_interval
  * @property CarbonImmutable|null $last_scan
  * @property CarbonImmutable|null $created_at
@@ -39,6 +42,9 @@ class Library extends Model
         'status',
         'scan_interval',
         'last_scan',
+        'original_handling',
+        'replacement_start',
+        'replacement_end',
     ];
 
     /**

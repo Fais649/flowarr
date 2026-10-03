@@ -29,7 +29,7 @@ type Props = {
 function DirectoryNode({
     name,
     path,
-    children = [],
+    children,
     depth,
     selectedPath,
     onSelectPath,
@@ -42,7 +42,55 @@ function DirectoryNode({
     onSelectPath: (path: string) => void;
 }) {
     const [expanded, setExpanded] = useState(depth === 0);
+    const [nodes, setNodes] = useState<TreeNode[] | undefined>(children);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const isSelected = selectedPath === path;
+
+    const toggle = async () => {
+        if (loading) {
+            return;
+        }
+
+        if (nodes !== undefined) {
+            setExpanded((value) => !value);
+
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch(
+                `/libraries/directories?path=${encodeURIComponent(path)}&depth=0`,
+                {
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                },
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    'Could not load this folder. Expand it to retry.',
+                );
+            }
+
+            const data = await response.json();
+            setNodes(data.directories);
+            setExpanded(true);
+        } catch (error) {
+            setError(
+                error instanceof Error
+                    ? error.message
+                    : 'Could not load this folder.',
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div>
@@ -58,32 +106,41 @@ function DirectoryNode({
                 }`}
                 style={{ paddingLeft: `${depth * 16 + 8}px` }}
             >
-                {children.length > 0 && (
-                    <span
-                        role="button"
-                        tabIndex={-1}
+                {nodes === undefined || nodes.length > 0 ? (
+                    <button
+                        type="button"
+                        aria-label={`${expanded ? 'Collapse' : 'Expand'} ${name}`}
+                        aria-expanded={expanded}
+                        disabled={loading}
                         onClick={(e) => {
                             e.stopPropagation();
-                            setExpanded((prev) => !prev);
+                            void toggle();
                         }}
-                        onKeyDown={(e) =>
-                            e.key === 'Enter' && setExpanded((prev) => !prev)
-                        }
-                        className="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded hover:bg-muted"
+                        className="flex size-4 shrink-0 items-center justify-center rounded hover:bg-muted"
                     >
-                        <ChevronRightIcon
-                            className={`size-3.5 transition-transform ${expanded ? 'rotate-90' : ''}`}
-                        />
-                    </span>
+                        {loading ? (
+                            <Loader2Icon className="size-3.5 animate-spin" />
+                        ) : (
+                            <ChevronRightIcon
+                                className={`size-3.5 transition-transform ${expanded ? 'rotate-90' : ''}`}
+                            />
+                        )}
+                    </button>
+                ) : (
+                    <span className="size-4 shrink-0" />
                 )}
-                {children.length === 0 && <span className="size-4 shrink-0" />}
                 <FolderIcon className="size-4 shrink-0 text-blue-500" />
                 <span className="truncate">{name}</span>
             </div>
 
-            {expanded && children.length > 0 && (
+            {error && (
+                <p role="alert" className="px-6 text-sm text-destructive">
+                    {error}
+                </p>
+            )}
+            {expanded && nodes && nodes.length > 0 && (
                 <div>
-                    {children.map((child) => (
+                    {nodes.map((child) => (
                         <DirectoryNode
                             key={child.path}
                             name={child.name}
@@ -123,7 +180,7 @@ export default function DirectoryBrowser({
                     .querySelector('meta[name="csrf-token"]')
                     ?.getAttribute('content') ?? '';
             const response = await fetch(
-                '/libraries/directories?path=/&depth=5',
+                '/libraries/directories?path=/&depth=0',
                 {
                     headers: {
                         Accept: 'application/json',

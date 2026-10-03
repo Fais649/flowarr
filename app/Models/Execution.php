@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $library_job_id
  * @property int|null $worker_id
+ * @property string|null $replacement_status
+ * @property array<string, mixed>|null $replacement
  * @property string $file_path
  * @property int|null $file_size
  * @property int|null $file_mtime
@@ -44,6 +46,8 @@ class Execution extends Model
         'library_job_id',
         'worker_id',
         'file_path',
+        'replacement_status',
+        'replacement',
         'file_size',
         'file_mtime',
         'status',
@@ -72,6 +76,7 @@ class Execution extends Model
     protected function casts(): array
     {
         return [
+            'replacement' => 'array',
             'id' => 'integer',
             'library_job_id' => 'integer',
             'worker_id' => 'integer',

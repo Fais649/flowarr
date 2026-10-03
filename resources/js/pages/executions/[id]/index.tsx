@@ -125,7 +125,7 @@ export default function ExecutionDetailPage({
                     />
                 )}
 
-                {execution.message && execution.status !== 'completed' && (
+                {execution.message && (
                     <Alert
                         variant={
                             execution.status === 'failed'

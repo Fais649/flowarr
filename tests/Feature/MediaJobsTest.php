@@ -232,3 +232,72 @@ it('never lets the queue worker time out long media jobs', function () {
 
     expect($job->timeout)->toBe(0)->and($job->tries)->toBe(1);
 });
+
+it('produces capped scaled copies without changing the source', function () {
+    config(['services.ffmpeg.max_bitrate' => 12000000, 'services.ffmpeg.max_width' => 80, 'services.ffmpeg.max_height' => 60]);
+    $source = $this->mediaDir.'/capped.mkv';
+    makeVideo($source, withSubtitles: true);
+    $before = hash_file('sha256', $source);
+    $execution = executionFor($this->library, LibraryJobId::TRANSCODE_MEDIA, $source);
+
+    TranscodeMedia::dispatchSync($execution);
+
+    expect($execution->refresh()->status)->toBe(ExecutionStatus::COMPLETED)
+        ->and(hash_file('sha256', $source))->toBe($before);
+    $process = new Process(['ffprobe', '-v', 'error', '-show_format', '-show_streams', '-of', 'json', $this->mediaDir.'/capped_hevc.mkv']);
+    $process->mustRun();
+    $data = json_decode($process->getOutput(), true);
+    $video = collect($data['streams'])->firstWhere('codec_type', 'video');
+    expect($video['width'])->toBeLessThanOrEqual(80)
+        ->and($video['height'])->toBeLessThanOrEqual(60)
+        ->and((float) $data['format']['size'] * 8 / (float) $data['format']['duration'])->toBeLessThanOrEqual(12000000)
+        ->and(collect($data['streams'])->where('codec_type', 'subtitle'))->toHaveCount(1);
+});
+
+it('refuses to overwrite an existing separate transcode', function () {
+    $source = $this->mediaDir.'/collision.mkv';
+    makeVideo($source);
+    File::put($this->mediaDir.'/collision_hevc.mkv', 'keep this output');
+    $hash = hash_file('sha256', $source);
+    $execution = executionFor($this->library, LibraryJobId::TRANSCODE_MEDIA, $source);
+
+    TranscodeMedia::dispatchSync($execution);
+
+    expect($execution->refresh()->status)->toBe(ExecutionStatus::FAILED)
+        ->and(hash_file('sha256', $source))->toBe($hash)
+        ->and(File::get($this->mediaDir.'/collision_hevc.mkv'))->toBe('keep this output');
+});
+
+it('honors library keep even when the transcode worker replaces originals', function () {
+    $this->library->update(['original_handling' => 'keep']);
+    $source = $this->mediaDir.'/keep.mkv';
+    makeVideo($source);
+    $hash = hash_file('sha256', $source);
+    $execution = executionFor($this->library, LibraryJobId::TRANSCODE_MEDIA, $source, replaceOriginal: true);
+    TranscodeMedia::dispatchSync($execution);
+    expect($execution->fresh()->status)->toBe(ExecutionStatus::COMPLETED)->and(hash_file('sha256', $source))->toBe($hash)->and($this->mediaDir.'/keep_hevc.mkv')->toBeFile();
+});
+
+it('defers a validated transcode until the library replacement window opens', function () {
+    $this->travelTo(now()->setTime(12, 0));
+    $this->library->update(['original_handling' => 'window', 'replacement_start' => '22:00', 'replacement_end' => '06:00']);
+    $source = $this->mediaDir.'/scheduled.mp4';
+    makeVideo($source);
+    $hash = hash_file('sha256', $source);
+    $execution = executionFor($this->library, LibraryJobId::TRANSCODE_MEDIA, $source);
+    TranscodeMedia::dispatchSync($execution);
+    expect($execution->fresh()->status)->toBe(ExecutionStatus::COMPLETED)->and($execution->fresh()->replacement_status)->toBe('pending')->and(hash_file('sha256', $source))->toBe($hash);
+    $this->travelTo(now()->setTime(23, 0));
+    $this->artisan('originals:replace')->assertSuccessful();
+    expect($execution->fresh()->replacement_status)->toBe('replaced')->and($source)->not->toBeFile()->and($this->mediaDir.'/scheduled.mkv')->toBeFile();
+    expect(collect(probeStreams($this->mediaDir.'/scheduled.mkv'))->pluck('codec_name')->all())->toContain('hevc');
+});
+
+it('immediately replaces an original using the library policy', function () {
+    $this->library->update(['original_handling' => 'immediate']);
+    $source = $this->mediaDir.'/immediate.mkv';
+    makeVideo($source);
+    $execution = executionFor($this->library, LibraryJobId::TRANSCODE_MEDIA, $source);
+    TranscodeMedia::dispatchSync($execution);
+    expect($execution->fresh()->replacement_status)->toBe('replaced')->and(collect(probeStreams($source))->pluck('codec_name')->all())->toContain('hevc');
+});

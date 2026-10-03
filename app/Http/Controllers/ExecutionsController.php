@@ -43,7 +43,7 @@ class ExecutionsController extends Controller
                 'value' => $s->value,
                 'label' => $s->label(),
             ]),
-            'libraries' => Library::orderBy('base_path')->get(['id', 'base_path']),
+            'libraries' => Library::with('workers')->orderBy('base_path')->get(['id', 'base_path']),
         ]);
     }
 

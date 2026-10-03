@@ -5,6 +5,7 @@ use App\Http\Controllers\DebugController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\ExecutionsController;
 use App\Http\Controllers\LibrariesController;
+use App\Http\Controllers\ManualExecutionsController;
 use App\Http\Controllers\MediaServerWebhookController;
 use App\Http\Controllers\WorkersController;
 use App\Models\User;
@@ -55,6 +56,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('{execution}/resume', 'resume')->name('resume');
         Route::post('{execution}/stop', 'stop')->name('stop');
     });
+    Route::get('executions/files/{library}', [ManualExecutionsController::class, 'files'])->name('executions.files');
+    Route::post('executions/manual', [ManualExecutionsController::class, 'store'])->name('executions.manual');
     Route::resource('executions', ExecutionsController::class)->only(['index', 'show', 'destroy']);
 
     if (app()->isLocal()) {

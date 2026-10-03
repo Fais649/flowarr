@@ -20,6 +20,9 @@ class MediaProbeResult
         private readonly array $subtitleCodecs = [],
         private readonly ?float $duration = null,
         private readonly ?string $colorPrimaries = null,
+        private readonly ?int $width = null,
+        private readonly ?int $height = null,
+        private readonly ?float $bitrate = null,
     ) {}
 
     public function fileExtension(): string
@@ -78,6 +81,13 @@ class MediaProbeResult
     public function isTargetVideoEncoding(): bool
     {
         return strtolower($this->videoCodec ?? '') === MediaProbeService::TARGET_ENCODING;
+    }
+
+    public function exceedsTranscodeLimits(): bool
+    {
+        return (config('services.ffmpeg.max_width') > 0 && $this->width > config('services.ffmpeg.max_width'))
+            || (config('services.ffmpeg.max_height') > 0 && $this->height > config('services.ffmpeg.max_height'))
+            || (config('services.ffmpeg.max_bitrate') > 0 && $this->bitrate > config('services.ffmpeg.max_bitrate'));
     }
 
     public function isHdr(): bool

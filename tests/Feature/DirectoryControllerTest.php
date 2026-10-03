@@ -91,3 +91,17 @@ it('returns 422 for home directory shortcut', function () {
 
     $response->assertStatus(422);
 });
+
+it('validates path and bounds recursion depth', function () {
+    $this->getJson('/libraries/directories?path[]=invalid')->assertUnprocessable();
+    $this->getJson('/libraries/directories?depth=999')->assertUnprocessable();
+    $this->getJson('/libraries/directories?depth=-1')->assertUnprocessable();
+});
+
+it('can browse directories beyond the old root depth limit', function () {
+    $dir = sys_get_temp_dir().'/deep-browser-'.uniqid();
+    $path = $dir.'/one/two/three/four/five/six/seven';
+    mkdir($path, 0755, true);
+    $this->getJson('/libraries/directories?path='.urlencode(dirname($path)).'&depth=0')
+        ->assertOk()->assertJsonPath('directories.0.name', 'seven');
+});

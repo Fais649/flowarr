@@ -41,6 +41,9 @@ class LibrariesController extends Controller
             'base_path' => $request->validated('base_path'),
             'scan_interval' => $request->validated('scan_interval'),
             'status' => LibraryStatus::PENDING_SCAN,
+            'original_handling' => $request->validated('original_handling'),
+            'replacement_start' => $request->validated('replacement_start'),
+            'replacement_end' => $request->validated('replacement_end'),
         ]);
 
         // New libraries get every worker unless the form picked a subset,
