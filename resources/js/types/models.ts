@@ -17,6 +17,9 @@ export type Worker = {
 };
 
 export type Library = {
+    original_handling?: string | null;
+    replacement_start?: string | null;
+    replacement_end?: string | null;
     id: number;
     base_path: string;
     status: string;
@@ -27,6 +30,7 @@ export type Library = {
 };
 
 export type Execution = {
+    replacement_status?: string | null;
     id: number;
     file_path: string;
     status: ExecutionStatus;

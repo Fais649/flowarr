@@ -1,6 +1,8 @@
 import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import DirectoryBrowser from '@/components/directory-browser';
+import OriginalHandlingFields from '@/components/original-handling-fields';
+import type { OriginalHandling } from '@/components/original-handling-fields';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -14,13 +16,22 @@ function LibraryForm({
     library,
     workers,
 }: {
-    library?: { id: number; base_path: string; scan_interval: number };
+    library?: {
+        id: number;
+        base_path: string;
+        scan_interval: number;
+    } & Partial<OriginalHandling>;
     workers: Worker[];
 }) {
     const [browserOpen, setBrowserOpen] = useState(false);
     const { data, setData, post, patch, processing, errors } = useForm({
         base_path: library?.base_path ?? '',
         scan_interval: library?.scan_interval ?? 43200,
+        original_handling: library
+            ? (library.original_handling ?? null)
+            : 'keep',
+        replacement_start: library?.replacement_start ?? '',
+        replacement_end: library?.replacement_end ?? '',
         worker_ids: workers.map((worker) => worker.id),
     });
 
@@ -133,6 +144,15 @@ function LibraryForm({
                                 </p>
                             </div>
                         )}
+                        <OriginalHandlingFields
+                            value={data}
+                            onChange={(value) => setData({ ...data, ...value })}
+                            errors={{
+                                original_handling: errors.original_handling,
+                                replacement_start: errors.replacement_start,
+                                replacement_end: errors.replacement_end,
+                            }}
+                        />
                         <Button type="submit" disabled={processing}>
                             {library ? 'Update Library' : 'Create Library'}
                         </Button>
@@ -153,7 +173,11 @@ export default function CreateLibrary({
     library,
     workers = [],
 }: {
-    library?: { id: number; base_path: string; scan_interval: number };
+    library?: {
+        id: number;
+        base_path: string;
+        scan_interval: number;
+    } & Partial<OriginalHandling>;
     workers?: Worker[];
 }) {
     return (

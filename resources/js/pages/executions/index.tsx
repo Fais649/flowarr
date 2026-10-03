@@ -14,6 +14,8 @@ import { DateText } from '@/components/date-text';
 import { ExecutionActions } from '@/components/execution-actions';
 import { ExecutionStatusCell } from '@/components/execution-status';
 import { FilterBar } from '@/components/filter-bar';
+import type { PickerLibrary } from '@/components/manual-execution-picker';
+import ManualExecutionPicker from '@/components/manual-execution-picker';
 import { ProcessingBanner } from '@/components/processing-banner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -46,7 +48,7 @@ export default function ExecutionsIndex({
     executions: Pagination;
     filters: Record<string, string>;
     statuses: { value: string; label: string }[];
-    libraries: { id: number; base_path: string }[];
+    libraries: PickerLibrary[];
 }) {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [search, setSearch] = useState(filters.search ?? '');
@@ -180,11 +182,26 @@ export default function ExecutionsIndex({
             key: 'status',
             label: 'Status',
             render: (e) => (
-                <ExecutionStatusCell
-                    status={e.status}
-                    progress={e.progress}
-                    message={e.message}
-                />
+                <div className="space-y-1">
+                    <ExecutionStatusCell
+                        status={e.status}
+                        progress={e.progress}
+                        message={e.status === 'completed' ? null : e.message}
+                    />
+                    {e.replacement_status && (
+                        <p className="text-xs text-muted-foreground">
+                            Original: {e.replacement_status}
+                        </p>
+                    )}
+                    {e.status === 'completed' && e.message && (
+                        <p
+                            className="max-w-56 truncate text-xs text-muted-foreground"
+                            title={e.message}
+                        >
+                            {e.message}
+                        </p>
+                    )}
+                </div>
             ),
         },
         {
@@ -205,6 +222,7 @@ export default function ExecutionsIndex({
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex items-baseline justify-between">
                     <h1 className="text-2xl font-bold">Executions</h1>
+                    <ManualExecutionPicker libraries={libraries} />
                     <span className="text-sm text-muted-foreground">
                         {executions.total} total
                     </span>

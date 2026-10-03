@@ -15,6 +15,7 @@ REPLACE_ORIGINAL="${2:-false}"
 MODE="${3:-auto}"
 VIDEO_FILTER="${4:-}"
 MAX_BITRATE="${5:-0}"
+VALIDATE_REPLACEMENT="${6:-false}"
 FFPROBE_BIN="${FFPROBE_BIN:-ffprobe}"
 
 FFMPEG_BIN="${FFMPEG_BIN:-ffmpeg}"
@@ -193,7 +194,7 @@ fi
 "$FFPROBE_BIN" -v error -show_format -show_streams -of json "$TEMP_OUTPUT" > "$TEMP_OUTPUT.output.json"
 php "$(dirname "$0")/validate_transcode.php" "$TEMP_OUTPUT.source.json" "$TEMP_OUTPUT.output.json" "$MAX_BITRATE"
 rm -f "$TEMP_OUTPUT.source.json" "$TEMP_OUTPUT.output.json"
-if [ "$REPLACE_ORIGINAL" = "true" ]; then
+if [ "$REPLACE_ORIGINAL" = "true" ] || [ "$VALIDATE_REPLACEMENT" = "true" ]; then
     "$FFMPEG_BIN" -v error -xerror -nostdin -i "$TEMP_OUTPUT" -map 0:v -map '0:a?' -f null -
 fi
 if [ "$(stat -c "%s:%Y:%i" "$FILE_PATH")" != "$SOURCE_FINGERPRINT" ]; then

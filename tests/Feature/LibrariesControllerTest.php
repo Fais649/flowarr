@@ -206,3 +206,14 @@ it('toggles a worker off for a library', function () {
         'worker_id' => $worker->id,
     ]);
 });
+
+it('persists per-library original handling and validates replacement hours', function () {
+    Queue::fake();
+    $dir = sys_get_temp_dir().'/lib-policy-'.uniqid();
+    mkdir($dir, 0755, true);
+    $values = ['base_path' => $dir, 'scan_interval' => 3600, 'original_handling' => 'window', 'replacement_start' => '22:00', 'replacement_end' => '06:00'];
+    $this->post('/libraries', $values)->assertRedirect();
+    $this->assertDatabaseHas('libraries', $values);
+    $this->post('/libraries', [...$values, 'replacement_end' => '22:00'])->assertSessionHasErrors('replacement_end');
+    $this->post('/libraries', [...$values, 'replacement_start' => null])->assertSessionHasErrors('replacement_start');
+});

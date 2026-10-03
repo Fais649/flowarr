@@ -46,6 +46,6 @@ class ExtractSubtitlesExecutionService extends ProcessExecutionService
             return $this->execution->file_path;
         }
 
-        return TranscodeOutput::pathFor($this->execution->file_path, $transcodeWorker->replace_original);
+        return TranscodeOutput::pathFor($this->execution->file_path, app(OriginalReplacement::class)->policy($library, $transcodeWorker->replace_original) !== 'keep');
     }
 }
