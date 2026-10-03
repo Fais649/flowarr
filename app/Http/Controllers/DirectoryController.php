@@ -11,8 +11,12 @@ class DirectoryController extends Controller
 {
     public function __invoke(Request $request): JsonResponse
     {
-        $rawPath = $request->query('path', '/');
-        $depth = (int) $request->query('depth', 5);
+        $validated = $request->validate([
+            'path' => ['sometimes', 'string'],
+            'depth' => ['sometimes', 'integer', 'between:0,5'],
+        ]);
+        $rawPath = $validated['path'] ?? '/';
+        $depth = (int) ($validated['depth'] ?? 0);
 
         $this->validatePath($rawPath);
 
